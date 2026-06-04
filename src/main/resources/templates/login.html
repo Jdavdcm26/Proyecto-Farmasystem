@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar sesión · FarmaSystem</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}" />
+  <link rel="stylesheet" th:href="@{/css/styles.css}" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { background: #111210; }
+
+    .auth-page {
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Dot grid base — capa 0 */
+    .auth-page::before {
+      content: "";
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(circle at 1px 1px, oklch(0.22 0.008 145 / 0.50) 1px, transparent 0);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+
+    /* Un único gradiente limpio: verde suave desde la izquierda, se apaga antes del centro */
+    .auth-page::after {
+      content: "";
+      position: fixed; inset: 0; z-index: 1;
+      background: radial-gradient(
+        ellipse 65% 80% at -5% 50%,
+        oklch(0.381 0.118 145 / 0.22) 0%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* ── Columna izquierda ── */
+    .auth-left {
+      position: relative; z-index: 2;
+      padding: 48px 56px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+
+    .auth-brand {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .auth-brand-logo {
+      width: 46px; height: 46px;
+      background: oklch(1 0 0 / 0.10);
+      border: 1px solid oklch(1 0 0 / 0.15);
+      border-radius: 14px;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+    }
+    .auth-brand-name {
+      font-family: 'Figtree', sans-serif;
+      font-size: 20px; font-weight: 800;
+      color: oklch(0.938 0.005 145);
+      letter-spacing: -0.02em; margin: 0;
+    }
+    .auth-brand-sub {
+      font-size: 10px; letter-spacing: .18em;
+      text-transform: uppercase;
+      color: oklch(0.698 0.007 145);
+      margin: 0;
+    }
+
+    .auth-pitch { max-width: 440px; }
+    .auth-pitch h2 {
+      font-family: 'Figtree', sans-serif;
+      font-size: 38px; font-weight: 900;
+      line-height: 1.1; letter-spacing: -0.03em;
+      color: oklch(0.938 0.005 145);
+      margin: 0 0 14px;
+    }
+    .auth-pitch h2 em {
+      font-style: normal;
+      color: oklch(0.840 0.120 152); /* mint */
+    }
+    .auth-pitch p {
+      font-size: 15px; line-height: 1.65;
+      color: oklch(0.698 0.007 145);
+      margin: 0 0 32px;
+      max-width: 38ch;
+    }
+
+    .auth-feats { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    .auth-feats li {
+      display: flex; align-items: center; gap: 11px;
+      font-size: 13px; color: oklch(0.698 0.007 145);
+    }
+    .auth-feats li i {
+      width: 16px; height: 16px;
+      color: oklch(0.840 0.120 152); flex-shrink: 0;
+    }
+
+    .auth-left-foot {
+      font-size: 12px; letter-spacing: .08em;
+      color: oklch(0.504 0.007 145);
+    }
+
+    /* ── Columna derecha ── */
+    .auth-right {
+      position: relative; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+      padding: 48px 40px;
+    }
+
+    .auth-card-wrap {
+      position: relative;
+      width: 100%; max-width: 420px;
+    }
+
+    /* ── Card con contorno verde y luz RGB ── */
+    .auth-form-card {
+      position: relative;
+      background: oklch(0.136 0.006 145 / 0.95);
+      border: 1px solid oklch(0.470 0.148 145 / 0.55);
+      border-radius: 20px;
+      padding: 36px 40px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow:
+        /* Glow exterior — capa más cercana al borde */
+        0 0 8px  oklch(0.381 0.118 145 / 0.50),
+        /* Glow medio */
+        0 0 24px oklch(0.381 0.118 145 / 0.28),
+        /* Glow difuso amplio */
+        0 0 60px oklch(0.381 0.118 145 / 0.14),
+        /* Sombra de profundidad */
+        0 24px 64px oklch(0 0 0 / 0.60);
+      animation: card-breathe 3s ease-in-out infinite alternate;
+    }
+
+    /* Línea de luz interior en el borde superior */
+    .auth-form-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 20px; right: 20px;
+      height: 1px;
+      background: linear-gradient(
+        to right,
+        transparent,
+        oklch(0.840 0.120 152 / 0.70) 40%,
+        oklch(0.840 0.120 152 / 0.70) 60%,
+        transparent
+      );
+      border-radius: 1px;
+    }
+
+    @keyframes card-breathe {
+      from {
+        box-shadow:
+          0 0 8px  oklch(0.381 0.118 145 / 0.45),
+          0 0 24px oklch(0.381 0.118 145 / 0.24),
+          0 0 60px oklch(0.381 0.118 145 / 0.12),
+          0 24px 64px oklch(0 0 0 / 0.60);
+      }
+      to {
+        box-shadow:
+          0 0 12px oklch(0.381 0.118 145 / 0.65),
+          0 0 36px oklch(0.381 0.118 145 / 0.38),
+          0 0 80px oklch(0.381 0.118 145 / 0.20),
+          0 24px 64px oklch(0 0 0 / 0.60);
+      }
+    }
+
+    .form-eyebrow {
+      font-size: 10px; letter-spacing: .22em;
+      text-transform: uppercase; font-weight: 700;
+      color: oklch(0.840 0.120 152); /* mint */
+      margin: 0 0 10px;
+    }
+    .form-title {
+      font-family: 'Figtree', sans-serif;
+      font-size: 26px; font-weight: 800;
+      color: oklch(0.938 0.005 145);
+      margin: 0 0 6px; letter-spacing: -0.025em;
+    }
+    .form-sub {
+      font-size: 14px; color: oklch(0.504 0.007 145);
+      margin: 0 0 28px; line-height: 1.55;
+    }
+
+    .form-foot {
+      margin-top: 22px; text-align: center;
+      font-size: 13px; color: oklch(0.504 0.007 145);
+    }
+    .form-foot a {
+      color: oklch(0.840 0.120 152);
+      font-weight: 600; text-decoration: none;
+    }
+    .form-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 860px) {
+      .auth-page { grid-template-columns: 1fr; }
+      .auth-left { display: none; }
+      .auth-right { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+
+<div class="auth-page">
+
+  <!-- ── Columna izquierda: marca + pitch ── -->
+  <aside class="auth-left" aria-hidden="true">
+    <div class="auth-brand">
+      <div class="auth-brand-logo">
+        <img th:src="@{/img/logo-white.svg}" alt="" width="22" height="22" />
+      </div>
+      <div>
+        <p class="auth-brand-sub">Sistema Farmacéutico</p>
+        <h1 class="auth-brand-name">FarmaSystem</h1>
+      </div>
+    </div>
+
+    <div class="auth-pitch">
+      <h2>Cuida la salud<br>de tu <em>comunidad.</em></h2>
+      <p>Plataforma integral para la gestión de inventario, ventas y atención al cliente en una farmacia moderna.</p>
+      <ul class="auth-feats">
+        <li><i data-lucide="shield-check"></i><span>Trazabilidad de inventario y control de vencimientos</span></li>
+        <li><i data-lucide="trending-up"></i><span>Indicadores de ventas e ingresos en tiempo real</span></li>
+        <li><i data-lucide="users"></i><span>Catálogo público con compra para clientes registrados</span></li>
+        <li><i data-lucide="bot"></i><span>Consulta de IA para recomendación de productos</span></li>
+      </ul>
+    </div>
+
+    <p class="auth-left-foot">© 2026 FarmaSystem</p>
+  </aside>
+
+  <!-- ── Columna derecha: form ── -->
+  <main id="main" class="auth-right">
+    <div class="auth-card-wrap">
+      <div class="auth-form-card">
+        <p class="form-eyebrow">Acceso seguro</p>
+        <h2 class="form-title">Bienvenido de nuevo</h2>
+        <p class="form-sub">Ingresa tus credenciales para continuar.</p>
+
+        <div id="alert" role="alert" aria-live="polite"></div>
+
+        <form id="loginForm" novalidate>
+          <div class="field">
+            <label for="username">Usuario <span class="req" aria-hidden="true">*</span></label>
+            <div class="ctrl">
+              <i data-lucide="user" class="lead" aria-hidden="true"></i>
+              <input id="username" name="username" type="text" autocomplete="username" required placeholder="tu_usuario" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="password">Contraseña <span class="req" aria-hidden="true">*</span></label>
+            <div class="ctrl">
+              <i data-lucide="lock" class="lead" aria-hidden="true"></i>
+              <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+            </div>
+          </div>
+          <div class="auth-actions">
+            <button class="btn btn-primary btn-block" type="submit">
+              <i data-lucide="log-in" aria-hidden="true"></i> Iniciar sesión
+            </button>
+          </div>
+        </form>
+
+        <p class="form-foot">¿Aún no tienes cuenta? <a th:href="@{/registro}">Crear cuenta de cliente</a></p>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  $('#loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    const alertEl = $('#alert'); alertEl.innerHTML = '';
+    const btn = e.target.querySelector('button'); btn.disabled = true;
+    try {
+      const r = await api('/api/auth/login', { method: 'POST', body: JSON.stringify(body) });
+      window.location.href = r.rol === 'ADMIN' ? '/admin/inicio' : '/tienda';
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error"><i data-lucide="circle-alert"></i><span>${err.message}</span></div>`;
+      lucide.createIcons(); btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
