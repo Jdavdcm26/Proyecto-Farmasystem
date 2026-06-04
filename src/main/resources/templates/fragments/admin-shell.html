@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title th:text="${title} + ' · FarmaSystem'">FarmaSystem</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}" />
+  <link rel="stylesheet" th:href="@{/css/styles.css}" />
+  <script>
+    // Aplica tema antes del render para evitar parpadeo.
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<aside th:fragment="sidebar(active)" class="sidebar" aria-label="Navegación principal">
+  <div class="sidebar-head">
+    <div class="brand">
+      <div class="brand-logo">
+        <img th:src="@{/img/logo-white.svg}" alt="" width="18" height="18" aria-hidden="true" />
+      </div>
+      <div class="brand-text">
+        <p class="brand-sub">Admin</p>
+        <h1 class="brand-title">FarmaSystem</h1>
+      </div>
+    </div>
+    <button class="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Colapsar menú" title="Colapsar menú">
+      <i data-lucide="panel-left-close"></i>
+    </button>
+  </div>
+
+  <p class="nav-section">Panel</p>
+  <div class="nav">
+    <a class="nav-item" th:classappend="${active=='inicio'}?'active'" th:href="@{/admin/inicio}">
+      <i data-lucide="layout-dashboard"></i><span>Inicio</span>
+    </a>
+  </div>
+
+  <p class="nav-section">Gestión</p>
+  <div class="nav">
+    <a class="nav-item" th:classappend="${active=='productos'}?'active'" th:href="@{/admin/productos}">
+      <i data-lucide="package"></i><span>Productos</span>
+      <span class="nav-badge hidden" id="badge-productos"></span>
+    </a>
+    <a class="nav-item" th:classappend="${active=='lotes'}?'active'" th:href="@{/admin/lotes}">
+      <i data-lucide="layers"></i><span>Lotes</span>
+      <span class="nav-badge hidden" id="badge-lotes"></span>
+    </a>
+    <a class="nav-item" th:classappend="${active=='categorias'}?'active'" th:href="@{/admin/categorias}">
+      <i data-lucide="tags"></i><span>Categorías</span>
+      <span class="nav-badge hidden" id="badge-categorias"></span>
+    </a>
+    <a class="nav-item" th:classappend="${active=='clientes'}?'active'" th:href="@{/admin/clientes}">
+      <i data-lucide="users"></i><span>Clientes</span>
+      <span class="nav-badge hidden" id="badge-clientes"></span>
+    </a>
+    <a class="nav-item" th:classappend="${active=='ventas'}?'active'" th:href="@{/admin/ventas}">
+      <i data-lucide="receipt"></i><span>Ventas</span>
+      <span class="nav-badge hidden" id="badge-ventas"></span>
+    </a>
+    <a class="nav-item" th:classappend="${active=='reportes'}?'active'" th:href="@{/admin/reportes}">
+      <i data-lucide="bar-chart-3"></i><span>Reportes</span>
+    </a>
+  </div>
+
+  <p class="nav-section">Cuenta</p>
+  <div class="nav">
+    <a class="nav-item" th:classappend="${active=='perfil'}?'active'" th:href="@{/admin/perfil}">
+      <i data-lucide="user-cog"></i><span>Mi perfil</span>
+    </a>
+    <a class="nav-item" href="#" onclick="toggleTheme();return false;" title="Cambiar tema">
+      <i data-lucide="sun-moon"></i><span>Tema</span>
+    </a>
+    <a class="nav-item" href="#" onclick="logout();return false;">
+      <i data-lucide="log-out"></i><span>Salir</span>
+    </a>
+  </div>
+</aside>
+
+<div th:fragment="toasts" class="toast-host" aria-live="polite"></div>
+</body>
+</html>
