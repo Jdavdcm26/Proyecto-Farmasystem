@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/client-shell :: head('Consulta IA')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div th:replace="~{fragments/client-shell :: navbar('consulta-ia')}"></div>
+
+<main id="main" class="client-main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Consulta con IA</h1>
+      <p class="page-sub">Describe tus síntomas y te recomendamos productos de nuestra farmacia.</p>
+    </div>
+    <div class="user-chip" id="userChip"></div>
+  </div>
+
+  <div class="chat-layout">
+
+    <!-- ── Sidebar historial ── -->
+    <aside class="chat-sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title"><i data-lucide="history"></i> Historial</span>
+        <button class="btn btn-sm btn-primary" onclick="nuevaConsulta()" title="Nueva consulta">
+          <i data-lucide="square-pen"></i>
+        </button>
+      </div>
+      <div class="sidebar-list" id="sidebarList">
+        <p class="sidebar-empty" id="sidebarEmpty">Sin consultas anteriores.</p>
+      </div>
+    </aside>
+
+    <!-- ── Chat principal ── -->
+    <div class="chat-shell">
+      <div class="chat-body" id="chatMessages" aria-live="polite" aria-label="Conversación">
+        <div class="chat-row ia" id="welcomeMsg">
+          <div class="chat-avatar ia"><i data-lucide="bot"></i></div>
+          <div class="chat-bubble ia">
+            Hola, soy tu asistente farmacéutico de FarmaSystem. Cuéntame tus síntomas o qué necesitas y te recomendaré los productos disponibles en nuestra farmacia.
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-row" id="inputRow">
+        <div class="chat-input-wrap">
+          <textarea
+            id="chatInput"
+            class="chat-textarea"
+            placeholder="Ej: Tengo dolor de cabeza y fiebre desde ayer…"
+            rows="2"
+            onkeydown="handleKey(event)"
+          ></textarea>
+        </div>
+        <button id="sendBtn" class="btn btn-primary chat-send" onclick="sendMessage()">
+          <i data-lucide="send"></i>
+          <span>Enviar</span>
+        </button>
+      </div>
+
+      <!-- Banner modo vista -->
+      <div class="chat-view-banner" id="viewBanner" style="display:none">
+        <i data-lucide="eye"></i>
+        <span>Estás viendo una consulta anterior.</span>
+        <button class="btn btn-sm btn-outline" onclick="nuevaConsulta()">
+          <i data-lucide="square-pen"></i> Nueva consulta
+        </button>
+      </div>
+
+      <p class="chat-disclaimer">
+        <i data-lucide="info"></i>
+        Este asistente es informativo. Consulta siempre a un profesional de la salud.
+      </p>
+    </div>
+
+  </div>
+</main>
+
+<div th:replace="~{fragments/client-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  let sending   = false;
+  let historial = [];
+  let activeId  = null; // null = modo nueva consulta
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    const session = await requireSession('CLIENT');
+    paintUserChip(session);
+    lucide.createIcons();
+    await cargarHistorial();
+    $('#chatInput').focus();
+  });
+
+  // ── Historial ────────────────────────────────────────────────────────────────
+  async function cargarHistorial() {
+    try {
+      historial = await api('/api/consulta-ia/historial');
+      renderSidebar();
+    } catch (_) {}
+  }
+
+  function renderSidebar() {
+    const list  = $('#sidebarList');
+    const empty = $('#sidebarEmpty');
+
+    if (!historial.length) {
+      empty.style.display = 'block';
+      list.querySelectorAll('.sidebar-item').forEach(el => el.remove());
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.querySelectorAll('.sidebar-item').forEach(el => el.remove());
+
+    historial.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'sidebar-item' + (c.id === activeId ? ' active' : '');
+      item.dataset.id = c.id;
+
+      const fecha = new Date(c.fecha).toLocaleDateString('es-CO', { dateStyle: 'medium' });
+      const preview = c.sintomas.length > 55 ? c.sintomas.slice(0, 55) + '…' : c.sintomas;
+
+      item.innerHTML = `
+        <div class="sidebar-item-body" onclick="verConsulta(${c.id})">
+          <span class="sidebar-item-text">${preview}</span>
+          <span class="sidebar-item-date">${fecha}</span>
+        </div>
+        <button class="sidebar-del" onclick="eliminarConsulta(event, ${c.id})" title="Eliminar">
+          <i data-lucide="trash-2"></i>
+        </button>`;
+
+      list.appendChild(item);
+    });
+
+    lucide.createIcons();
+  }
+
+  // ── Ver consulta del historial ───────────────────────────────────────────────
+  function verConsulta(id) {
+    const consulta = historial.find(c => c.id === id);
+    if (!consulta) return;
+
+    activeId = id;
+    renderSidebar();
+
+    const container = $('#chatMessages');
+    container.innerHTML = '';
+
+    mkBubble(container, 'usuario', consulta.sintomas);
+    mkBubble(container, 'ia', consulta.respuesta);
+
+    lucide.createIcons();
+    container.scrollTop = container.scrollHeight;
+
+    // Cambiar a modo vista
+    $('#inputRow').style.display  = 'none';
+    $('#viewBanner').style.display = 'flex';
+  }
+
+  // ── Nueva consulta ───────────────────────────────────────────────────────────
+  function nuevaConsulta() {
+    activeId = null;
+    renderSidebar();
+
+    const container = $('#chatMessages');
+    container.innerHTML = `
+      <div class="chat-row ia" id="welcomeMsg">
+        <div class="chat-avatar ia"><i data-lucide="bot"></i></div>
+        <div class="chat-bubble ia">
+          Hola, soy tu asistente farmacéutico de FarmaSystem. Cuéntame tus síntomas o qué necesitas y te recomendaré los productos disponibles en nuestra farmacia.
+        </div>
+      </div>`;
+
+    $('#inputRow').style.display   = 'flex';
+    $('#viewBanner').style.display = 'none';
+    lucide.createIcons();
+    $('#chatInput').focus();
+  }
+
+  // ── Eliminar consulta ────────────────────────────────────────────────────────
+  async function eliminarConsulta(e, id) {
+    e.stopPropagation();
+    try {
+      await api(`/api/consulta-ia/historial/${id}`, { method: 'DELETE' });
+      historial = historial.filter(c => c.id !== id);
+      if (activeId === id) nuevaConsulta();
+      else renderSidebar();
+      toast('Consulta eliminada.');
+    } catch (err) {
+      toast(err.message || 'Error al eliminar', 'error');
+    }
+  }
+
+  // ── Enviar mensaje ───────────────────────────────────────────────────────────
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  async function sendMessage() {
+    if (sending) return;
+    const input   = $('#chatInput');
+    const mensaje = input.value.trim();
+    if (!mensaje) return;
+
+    sending = true;
+    const btn = $('#sendBtn'); btn.disabled = true; input.disabled = true;
+
+    const container = $('#chatMessages');
+    mkBubble(container, 'usuario', mensaje);
+    input.value = '';
+    const typingId = appendTyping();
+
+    try {
+      const data = await api('/api/consulta-ia', { method: 'POST', body: JSON.stringify({ mensaje }) });
+      removeTyping(typingId);
+      mkBubble(container, 'ia', data.respuesta);
+      // Recargar sidebar para que aparezca la nueva consulta
+      await cargarHistorial();
+    } catch (err) {
+      removeTyping(typingId);
+      toast(err.message || 'Error al contactar la IA', 'error');
+    } finally {
+      sending = false; btn.disabled = false; input.disabled = false; input.focus();
+    }
+  }
+
+  // ── Helpers de DOM ───────────────────────────────────────────────────────────
+  function mkBubble(container, tipo, texto) {
+    const isIA = tipo === 'ia';
+    const row  = document.createElement('div');
+    row.className = `chat-row ${isIA ? 'ia' : 'user'}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `chat-avatar ${isIA ? 'ia' : 'user'}`;
+    avatar.innerHTML = isIA ? '<i data-lucide="bot"></i>' : '<i data-lucide="user"></i>';
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${isIA ? 'ia' : 'user'}`;
+    bubble.textContent = texto;
+
+    if (isIA) { row.appendChild(avatar); row.appendChild(bubble); }
+    else       { row.appendChild(bubble); row.appendChild(avatar); }
+
+    container.appendChild(row);
+    lucide.createIcons();
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function appendTyping() {
+    const container = $('#chatMessages');
+    const id  = 'typing-' + Date.now();
+    const row = document.createElement('div');
+    row.id = id; row.className = 'chat-row ia';
+    row.innerHTML = `
+      <div class="chat-avatar ia"><i data-lucide="bot"></i></div>
+      <div class="chat-bubble ia typing-dots">
+        Escribiendo<span>.</span><span>.</span><span>.</span>
+      </div>`;
+    container.appendChild(row);
+    lucide.createIcons();
+    container.scrollTop = container.scrollHeight;
+    return id;
+  }
+
+  function removeTyping(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+</script>
+<style>
+  /* ── Layout general ── */
+  .chat-layout {
+    display: flex;
+    gap: 0;
+    height: calc(100dvh - 210px);
+    min-height: 420px;
+    border: 1px solid var(--dark-600);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* ── Sidebar ── */
+  .chat-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--dark-900);
+    border-right: 1px solid var(--dark-600);
+  }
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid var(--dark-600);
+    gap: 8px;
+  }
+  .sidebar-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-200);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sidebar-title i { width: 14px; height: 14px; }
+  .sidebar-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dark-600) transparent;
+  }
+  .sidebar-empty {
+    font-size: 12px;
+    color: var(--ink-400);
+    text-align: center;
+    padding: 20px 12px;
+    margin: 0;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: var(--radius-md);
+    padding: 2px 4px 2px 2px;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .sidebar-item:hover { background: var(--dark-700); }
+  .sidebar-item.active { background: var(--green-tint); }
+  .sidebar-item-body {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .sidebar-item-text {
+    font-size: 12.5px;
+    color: var(--ink-100);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+  }
+  .sidebar-item-date {
+    font-size: 11px;
+    color: var(--ink-400);
+  }
+  .sidebar-del {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-400);
+    padding: 5px;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    transition: color 120ms, background 120ms;
+  }
+  .sidebar-del:hover { color: #f87171; background: oklch(0.3 0.08 20 / 0.3); }
+  .sidebar-del i { width: 13px; height: 13px; pointer-events: none; }
+
+  /* ── Chat shell ── */
+  .chat-shell {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--dark-800);
+  }
+
+  /* ── Messages area ── */
+  .chat-body {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 24px;
+    background: var(--dark-950);
+    background-image: radial-gradient(circle at 1px 1px, oklch(0.22 0.008 145 / 0.40) 1px, transparent 0);
+    background-size: 22px 22px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--dark-600) transparent;
+  }
+
+  /* ── Chat rows ── */
+  .chat-row { display: flex; gap: 10px; align-items: flex-start; max-width: 100%; }
+  .chat-row.user { flex-direction: row-reverse; }
+
+  /* ── Avatars ── */
+  .chat-avatar {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .chat-avatar i { width: 16px; height: 16px; }
+  .chat-avatar.ia   { background: var(--green-tint); color: var(--green-400); border: 1px solid oklch(0.381 0.118 145 / 0.30); }
+  .chat-avatar.user { background: var(--blue-tint);  color: oklch(0.700 0.130 230); border: 1px solid oklch(0.425 0.118 230 / 0.30); }
+
+  /* ── Bubbles ── */
+  .chat-bubble {
+    max-width: 72%;
+    padding: 11px 15px;
+    font-size: 14px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+  }
+  .chat-bubble.ia {
+    background: var(--dark-700);
+    color: var(--ink-100);
+    border-color: var(--dark-600);
+    border-top-left-radius: 4px;
+  }
+  .chat-bubble.user {
+    background: var(--green-tint);
+    color: var(--ink-100);
+    border-color: oklch(0.381 0.118 145 / 0.30);
+    border-top-right-radius: 4px;
+  }
+
+  /* ── Typing dots ── */
+  .typing-dots { color: var(--ink-300); }
+  .typing-dots span { display: inline-block; animation: dot-flash 1.2s infinite; margin-left: 1px; }
+  .typing-dots span:nth-child(2) { animation-delay: .4s; }
+  .typing-dots span:nth-child(3) { animation-delay: .8s; }
+  @keyframes dot-flash { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+  /* ── Input area ── */
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    padding: 14px 18px;
+    border-top: 1px solid var(--dark-600);
+    background: var(--dark-800);
+  }
+  .chat-input-wrap { flex: 1; }
+  .chat-textarea {
+    width: 100%;
+    resize: none;
+    padding: 11px 14px;
+    border: 1.5px solid var(--dark-600);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    line-height: 1.55;
+    background: var(--dark-700);
+    color: var(--ink-100);
+    font-family: 'Inter', system-ui, sans-serif;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .chat-textarea::placeholder { color: var(--ink-400); }
+  .chat-textarea:focus {
+    outline: none;
+    border-color: var(--green-700);
+    box-shadow: 0 0 0 3px var(--green-tint);
+  }
+  .chat-send { min-height: 50px; padding: 0 22px; flex-shrink: 0; }
+  .chat-send i { width: 16px; height: 16px; }
+
+  /* ── Banner modo vista ── */
+  .chat-view-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-top: 1px solid var(--dark-600);
+    background: var(--dark-800);
+    font-size: 13px;
+    color: var(--ink-300);
+  }
+  .chat-view-banner i { width: 14px; height: 14px; flex-shrink: 0; }
+  .chat-view-banner span { flex: 1; }
+
+  /* ── Disclaimer ── */
+  .chat-disclaimer {
+    padding: 8px 18px 12px;
+    font-size: 12px;
+    color: var(--ink-400);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--dark-800);
+    margin: 0;
+  }
+  .chat-disclaimer i { width: 13px; height: 13px; flex-shrink: 0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .chat-sidebar { width: 200px; }
+  }
+</style>
+</body>
+</html>
