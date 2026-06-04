@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/client-shell :: head('Mi Perfil')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div th:replace="~{fragments/client-shell :: navbar('mi-perfil')}"></div>
+
+<main id="main" class="client-main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Mi perfil</h1>
+      <p class="page-sub">Información personal y datos de tu cuenta.</p>
+    </div>
+    <div class="user-chip" id="userChip"></div>
+  </div>
+
+  <div class="profile-grid">
+    <!-- Datos personales -->
+    <div class="card">
+      <div class="card-toolbar">
+        <h2 class="section-title" style="margin:0"><i data-lucide="user"></i> Datos personales</h2>
+        <button class="btn btn-sm btn-outline" onclick="openEdit()"><i data-lucide="pencil"></i> Editar</button>
+      </div>
+      <dl class="detail-rows" id="info-view">
+        <div class="detail-row"><dt>Cargando…</dt><dd><div class="skel" style="height:13px;width:120px"></div></dd></div>
+      </dl>
+    </div>
+
+    <!-- Cuenta -->
+    <div class="card">
+      <div class="card-toolbar">
+        <h2 class="section-title" style="margin:0"><i data-lucide="shield-check"></i> Cuenta</h2>
+        <button class="btn btn-sm btn-outline" onclick="openEditCuenta()"><i data-lucide="pencil"></i> Editar</button>
+      </div>
+      <dl class="detail-rows" id="cuenta-view">
+        <div class="detail-row"><dt>Cargando…</dt><dd><div class="skel" style="height:13px;width:100px"></div></dd></div>
+      </dl>
+      <div class="divider"></div>
+      <p class="muted" style="font-size:var(--fs-13);margin:0 0 12px">¿Quieres cerrar tu sesión?</p>
+      <button class="btn btn-ghost" onclick="logout()"><i data-lucide="log-out"></i> Cerrar sesión</button>
+    </div>
+  </div>
+</main>
+
+<!-- Modal editar perfil -->
+<div class="modal-backdrop" id="mdl-edit">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Editar perfil</h3>
+    <p class="sub">Actualiza tus datos personales de contacto.</p>
+    <div id="edit-alert"></div>
+    <form id="edit-form">
+      <input type="hidden" name="cedula" id="e-cedula" />
+      <input type="hidden" name="usuarioId" id="e-userId" />
+      <div class="field">
+        <label>Nombre <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="user" class="lead"></i><input name="nombre" id="e-nombre" required maxlength="35" /></div>
+      </div>
+      <div class="field">
+        <label>Apellido <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="user" class="lead"></i><input name="apellido" id="e-apellido" required maxlength="35" /></div>
+      </div>
+      <div class="field">
+        <label>Teléfono <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="phone" class="lead"></i><input name="telefono" id="e-telefono" type="tel" required maxlength="15" /></div>
+      </div>
+      <div class="field">
+        <label>Dirección <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="map-pin" class="lead"></i><input name="direccion" id="e-direccion" required maxlength="50" /></div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <div class="ctrl"><i data-lucide="mail" class="lead"></i><input name="email" id="e-email" type="email" maxlength="50" /></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('mdl-edit')">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal editar cuenta -->
+<div class="modal-backdrop" id="mdl-edit-cuenta">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Editar cuenta</h3>
+    <p class="sub">Actualiza tu usuario, correo y contraseña.</p>
+    <div id="edit-cuenta-alert"></div>
+    <form id="edit-cuenta-form">
+      <div class="field">
+        <label>Nombre <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="user" class="lead"></i><input name="name" id="ec-name" required maxlength="50" /></div>
+      </div>
+      <div class="field">
+        <label>Apellido</label>
+        <div class="ctrl"><i data-lucide="user" class="lead"></i><input name="apellido" id="ec-apellido" maxlength="50" /></div>
+      </div>
+      <div class="field">
+        <label>Usuario <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="at-sign" class="lead"></i><input name="username" id="ec-username" required maxlength="30" pattern="^[a-zA-Z0-9_]+$" title="Solo letras, números y guiones bajos" /></div>
+      </div>
+      <div class="field">
+        <label>Correo electrónico <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="mail" class="lead"></i><input name="email" id="ec-email" type="email" required maxlength="50" /></div>
+      </div>
+      <div class="field">
+        <label>Nueva contraseña <span class="muted" style="font-weight:400;font-size:var(--fs-13)">(dejar en blanco para no cambiar)</span></label>
+        <div class="ctrl"><i data-lucide="lock" class="lead"></i><input name="password" id="ec-password" type="password" minlength="6" maxlength="50" /></div>
+      </div>
+      <div class="field">
+        <label>Confirmar nueva contraseña</label>
+        <div class="ctrl"><i data-lucide="lock" class="lead"></i><input name="passwordConfirm" id="ec-password-confirm" type="password" minlength="6" maxlength="50" /></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('mdl-edit-cuenta')">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div th:replace="~{fragments/client-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let perfil = null, session = null;
+
+  (async () => {
+    session = await requireSession('CLIENT'); paintUserChip(session);
+    perfil = await api('/api/clientes/mi-perfil');
+    renderInfo();
+    renderCuenta();
+  })().catch(e => toast(e.message, 'error'));
+
+  function mkRow(label, val) {
+    return `<div class="detail-row"><dt>${label}</dt><dd>${val || '—'}</dd></div>`;
+  }
+
+  function renderInfo() {
+    const p = perfil;
+    $('#info-view').innerHTML = [
+      mkRow('Cédula',    p.cedula),
+      mkRow('Nombre',    `${p.nombre} ${p.apellido}`),
+      mkRow('Teléfono',  p.telefono),
+      mkRow('Dirección', p.direccion),
+      mkRow('Email',     p.email),
+      mkRow('Estado',    p.estado
+        ? '<span class="pill green">Activo</span>'
+        : '<span class="pill gray">Inactivo</span>')
+    ].join('');
+  }
+
+  function renderCuenta() {
+    const s = session;
+    $('#cuenta-view').innerHTML = [
+      mkRow('Usuario', s.username),
+      mkRow('Rol',     '<span class="pill blue">CLIENT</span>'),
+      mkRow('Nombre',  s.nombreCompleto)
+    ].join('');
+  }
+
+  function openEdit() {
+    const p = perfil;
+    $('#e-cedula').value   = p.cedula;
+    $('#e-userId').value   = session.userId;
+    $('#e-nombre').value   = p.nombre;
+    $('#e-apellido').value = p.apellido;
+    $('#e-telefono').value = p.telefono || '';
+    $('#e-direccion').value = p.direccion || '';
+    $('#e-email').value    = p.email || '';
+    openModal('mdl-edit');
+  }
+
+  $('#edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target).entries());
+    const body = {
+      cedula: fd.cedula, nombre: fd.nombre, apellido: fd.apellido,
+      telefono: fd.telefono, direccion: fd.direccion,
+      email: fd.email || null, activo: perfil.estado ?? true,
+      usuarioId: parseInt(fd.usuarioId, 10)
+    };
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try {
+      perfil = await api('/api/clientes/mi-perfil', { method: 'PUT', body: JSON.stringify(body) });
+      session.nombreCompleto = `${perfil.nombre} ${perfil.apellido}`;
+      closeModal('mdl-edit');
+      renderInfo();
+      renderCuenta();
+      paintUserChip(session);
+      lucide.createIcons();
+      toast('Perfil actualizado.');
+    } catch(err) {
+      $('#edit-alert').innerHTML = `<div class="alert error"><i data-lucide="circle-alert"></i><span>${err.message}</span></div>`;
+      lucide.createIcons();
+    } finally { btn.disabled = false; }
+  });
+
+  async function openEditCuenta() {
+    $('#edit-cuenta-alert').innerHTML = '';
+    $('#ec-password').value = '';
+    $('#ec-password-confirm').value = '';
+    try {
+      const userPerfil = await api('/api/auth/mi-perfil');
+      $('#ec-name').value     = userPerfil.name || '';
+      $('#ec-apellido').value = userPerfil.apellido || '';
+      $('#ec-username').value = userPerfil.username || '';
+      $('#ec-email').value    = userPerfil.email || '';
+    } catch(err) {
+      $('#ec-username').value = session.username || '';
+      $('#ec-email').value    = '';
+    }
+    openModal('mdl-edit-cuenta');
+  }
+
+  $('#edit-cuenta-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target).entries());
+    if (fd.password !== fd.passwordConfirm) {
+      $('#edit-cuenta-alert').innerHTML = `<div class="alert error"><i data-lucide="circle-alert"></i><span>Las contraseñas no coinciden.</span></div>`;
+      lucide.createIcons();
+      return;
+    }
+    const body = {
+      name: fd.name, apellido: fd.apellido || '',
+      username: fd.username, email: fd.email,
+      password: fd.password || null
+    };
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try {
+      const updated = await api('/api/auth/mi-perfil', { method: 'PUT', body: JSON.stringify(body) });
+      session.username = updated.username;
+      session.nombreCompleto = updated.nombreCompleto;
+      // Refrescar también los datos personales si el nombre cambió
+      perfil.nombre   = updated.name || perfil.nombre;
+      perfil.apellido = updated.apellido || perfil.apellido;
+      closeModal('mdl-edit-cuenta');
+      renderInfo();
+      renderCuenta();
+      paintUserChip(session);
+      lucide.createIcons();
+      toast('Datos de cuenta actualizados.');
+    } catch(err) {
+      $('#edit-cuenta-alert').innerHTML = `<div class="alert error"><i data-lucide="circle-alert"></i><span>${err.message}</span></div>`;
+      lucide.createIcons();
+    } finally { btn.disabled = false; }
+  });
+</script>
+</body>
+</html>
