@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <defs>
+    <!-- Pill capsule -->
+    <symbol id="fi-pill" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <g transform="rotate(-32 12 12)">
+          <rect x="2.5" y="9" width="19" height="6.5" rx="3.25"/>
+          <line x1="12" y1="9" x2="12" y2="15.5"/>
+        </g>
+      </g>
+    </symbol>
+
+    <!-- Mortar & pestle -->
+    <symbol id="fi-mortar" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 11h16"/>
+        <path d="M5 11v1a7 7 0 0 0 7 7 7 7 0 0 0 7-7v-1"/>
+        <path d="M15 9.5 19.5 5"/>
+        <circle cx="20.2" cy="4.3" r="1.2"/>
+      </g>
+    </symbol>
+
+    <!-- Medicine bottle -->
+    <symbol id="fi-bottle" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3.5h6a1 1 0 0 1 1 1V7H8V4.5a1 1 0 0 1 1-1z"/>
+        <path d="M7.5 7h9a1 1 0 0 1 1 1v11.5a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V8a1 1 0 0 1 1-1z"/>
+        <path d="M10 14h4M12 12v4"/>
+      </g>
+    </symbol>
+
+    <!-- Medical cross -->
+    <symbol id="fi-cross" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3.5h4a1 1 0 0 1 1 1V9h4.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H15v4.5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V15H4.5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1H9V4.5a1 1 0 0 1 1-1z"/>
+      </g>
+    </symbol>
+
+    <!-- Leaf -->
+    <symbol id="fi-leaf" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 4c-1 8-5 13-12 14-1.5.2-2.5-.7-2.5-2.2C6 9.5 11.5 4 20 4z"/>
+        <path d="M5.5 18.5 13 11"/>
+      </g>
+    </symbol>
+
+    <!-- Thermometer -->
+    <symbol id="fi-thermo" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 5.5a2 2 0 0 1 4 0v9.7a3.5 3.5 0 1 1-4 0V5.5z"/>
+        <path d="M12 8.5v7"/>
+      </g>
+    </symbol>
+
+    <!-- Heartbeat / pulse -->
+    <symbol id="fi-pulse" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12.5h4l2-5 3 10 2-5h7"/>
+      </g>
+    </symbol>
+
+    <!-- Prescription / Rx -->
+    <symbol id="fi-rx" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3.5h8.5L19 8v11.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-14a2 2 0 0 1 1-1.99z"/>
+        <path d="M14.5 3.5V8H19"/>
+        <path d="M8.5 13.5h6M11.5 10.5v6"/>
+      </g>
+    </symbol>
+
+    <!-- Shopping bag -->
+    <symbol id="fi-bag" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 8h14l-1 11.5a2 2 0 0 1-2 1.9H8a2 2 0 0 1-2-1.9z"/>
+        <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+      </g>
+    </symbol>
+
+    <!-- Receipt -->
+    <symbol id="fi-receipt" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3.5h12v17.5l-2-1-2 1-2-1-2 1-2-1-2 1z"/>
+        <path d="M9 8h6M9 12h6M9 16h4"/>
+      </g>
+    </symbol>
+
+    <!-- Calendar -->
+    <symbol id="fi-calendar" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3.5" y="5" width="17" height="16" rx="2.5"/>
+        <path d="M3.5 10h17M8 3v4M16 3v4"/>
+        <circle cx="12" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+
+    <!-- Box / inventory -->
+    <symbol id="fi-box" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 8 12 4l8.5 4v11a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/>
+        <path d="M3.5 8h17"/>
+        <path d="M9 12h6v3.5H9z"/>
+      </g>
+    </symbol>
+
+    <!-- User plus -->
+    <symbol id="fi-user-plus" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="8" r="4"/>
+        <path d="M2.5 21v-1.5A5 5 0 0 1 7.5 14.5h3A5 5 0 0 1 15.5 19.5V21"/>
+        <path d="M19 7.5v6M16 10.5h6"/>
+      </g>
+    </symbol>
+
+    <!-- Shield check -->
+    <symbol id="fi-shield" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3.5 4.5 6v6c0 4.6 3.5 7.8 7.5 8.7 4-.9 7.5-4.1 7.5-8.7V6z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </g>
+    </symbol>
+
+    <!-- Chart bars -->
+    <symbol id="fi-chart" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 21h17"/>
+        <rect x="6" y="13" width="3" height="7" rx="1"/>
+        <rect x="10.5" y="8" width="3" height="12" rx="1"/>
+        <rect x="15" y="16" width="3" height="4" rx="1"/>
+      </g>
+    </symbol>
+
+    <!-- Tag / category -->
+    <symbol id="fi-tag" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 12 12 3.5h7a1 1 0 0 1 1 1v7L11.5 20a1 1 0 0 1-1.4 0L3.5 13.4a1 1 0 0 1 0-1.4z"/>
+        <circle cx="16.5" cy="7.5" r="1.2"/>
+      </g>
+    </symbol>
+
+    <!-- Cart -->
+    <symbol id="fi-cart" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3.5h2l1.2 3M6.2 6.5l1.8 9h10.5l1.7-7.5H6.2"/>
+        <circle cx="9.5" cy="19.5" r="1.4"/>
+        <circle cx="17.5" cy="19.5" r="1.4"/>
+      </g>
+    </symbol>
+
+    <!-- Search -->
+    <symbol id="fi-search" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="6.5"/>
+        <path d="m16 16 4.5 4.5"/>
+      </g>
+    </symbol>
+
+    <!-- Settings cog -->
+    <symbol id="fi-cog" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+      </g>
+    </symbol>
+
+    <!-- Logout -->
+    <symbol id="fi-logout" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3.5H5.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2H9"/>
+        <path d="M9 12h11.5"/>
+        <path d="m16.5 8 4 4-4 4"/>
+      </g>
+    </symbol>
+
+    <!-- User / profile -->
+    <symbol id="fi-user" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21v-1.5A5.5 5.5 0 0 1 9.5 14h5A5.5 5.5 0 0 1 20 19.5V21"/>
+      </g>
+    </symbol>
+
+    <!-- FarmaSystem leaf-cross brand mark -->
+    <symbol id="fi-brand" viewBox="0 0 100 100">
+      <path d="M50 8 C 64 22, 64 38, 50 48 C 36 38, 36 22, 50 8 Z
+               M92 50 C 78 64, 62 64, 52 50 C 62 36, 78 36, 92 50 Z
+               M50 92 C 36 78, 36 62, 50 52 C 64 62, 64 78, 50 92 Z
+               M8 50 C 22 36, 38 36, 48 50 C 38 64, 22 64, 8 50 Z"/>
+    </symbol>
+  </defs>
+</svg>
