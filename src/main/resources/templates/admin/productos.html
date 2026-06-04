@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Productos')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('productos')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Productos</h1>
+        <p class="page-sub">Catálogo de inventario disponible para la venta.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/admin/productos/nuevo}">
+        <i data-lucide="plus"></i> Nuevo producto
+      </a>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="q" placeholder="Buscar por nombre…" aria-label="Buscar producto" />
+      </div>
+      <select id="fCat">
+        <option value="">Todas las categorías</option>
+      </select>
+      <select id="fEstado">
+        <option value="">Todos los estados</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Producto</th><th>Categoría</th><th class="num">Precio (lote vigente)</th>
+          <th class="num">IVA</th><th class="num">Stock</th><th>Próx. vence</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="8"><div class="skel" style="height:50px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let all = [], cats = [];
+  (async () => {
+    await requireSession('ADMIN');
+    cats = await api('/api/admin/categorias').catch(()=>[]);
+    const cs = $('#fCat'); cats.forEach(c => cs.insertAdjacentHTML('beforeend', `<option value="${c.id}">${c.nombre}</option>`));
+    all = await api('/api/admin/productos');
+    render();
+    ['#q','#fCat','#fEstado'].forEach(s => $(s).addEventListener('input', render));
+  })().catch(e => toast(e.message,'error'));
+
+  function render(){
+    const q = $('#q').value.toLowerCase();
+    const cat = $('#fCat').value; const est = $('#fEstado').value;
+    const list = all.filter(p =>
+      (!q || p.nombre.toLowerCase().includes(q)) &&
+      (!cat || String(p.categoriaId)===cat) &&
+      (est==='' || String(p.activo)===est));
+    const tb = $('#rows');
+    if (!list.length) { tb.innerHTML = `<tr><td colspan="8" class="empty"><i data-lucide="package-open"></i><div>Sin productos para mostrar.</div></td></tr>`; lucide.createIcons(); return; }
+    tb.innerHTML = list.map(p => {
+      const lowStock = p.stockMinimo!=null && p.stock<=p.stockMinimo;
+      const stockPill = p.stock===0 ? `<span class="pill red">Sin stock</span>` :
+                       lowStock ? `<span class="pill amber">${p.stock} (bajo)</span>` :
+                       `<span>${p.stock}</span>`;
+      const precioCell = p.precio != null
+        ? `<b>${fmtMoney(p.precio)}</b>`
+        : `<span class="muted">sin lote</span>`;
+      return `<tr>
+        <td><b>${p.nombre}</b><div class="muted" style="font-size:12px">${p.descripcion||''}</div></td>
+        <td><span class="pill gray">${p.categoriaNombre||'—'}</span></td>
+        <td class="num">${precioCell}</td>
+        <td class="num">${p.iva != null ? p.iva + '%' : '—'}</td>
+        <td class="num">${stockPill}</td>
+        <td class="muted">${fmtDate(p.fechaVencimiento)}</td>
+        <td>${p.activo ? `<span class="pill green">Activo</span>` : `<span class="pill gray">Inactivo</span>`}</td>
+        <td class="row-actions">
+          <a class="btn btn-sm btn-ghost btn-icon" title="Lotes" href="/admin/productos/${p.id}/lotes"><i data-lucide="layers"></i></a>
+          <a class="btn btn-sm btn-ghost btn-icon" title="Editar" href="/admin/productos/${p.id}/editar"><i data-lucide="pencil"></i></a>
+          <button class="btn btn-sm btn-icon btn-danger" title="Eliminar" onclick="del(${p.id})"><i data-lucide="trash-2"></i></button>
+        </td>
+      </tr>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  async function del(id){
+    if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
+    try { await api(`/api/admin/productos/${id}`, { method:'DELETE' });
+      all = all.filter(p=>p.id!==id); render(); toast('Producto eliminado');
+    } catch(e){ toast(e.message,'error'); }
+  }
+</script>
+</body>
+</html>
