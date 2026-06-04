@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Mi perfil')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('perfil')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Mi perfil</h1>
+        <p class="page-sub">Información de tu cuenta de administrador.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/admin/editar-perfil}">
+        <i data-lucide="pencil"></i> Editar perfil
+      </a>
+    </div>
+
+    <div class="card" style="max-width:580px">
+      <div class="profile-head">
+        <div class="avatar-lg" id="avatar">A</div>
+        <div>
+          <p class="profile-name" id="p-nombre">—</p>
+          <p class="profile-role">Administrador</p>
+        </div>
+      </div>
+
+      <dl class="detail-rows">
+        <div class="detail-row">
+          <dt>Usuario</dt>
+          <dd id="p-username">—</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Correo</dt>
+          <dd id="p-email">—</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Nombre completo</dt>
+          <dd id="p-completo">—</dd>
+        </div>
+        <div class="detail-row">
+          <dt>Rol</dt>
+          <dd><span class="pill green">ADMIN</span></dd>
+        </div>
+      </dl>
+    </div>
+  </main>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  (async () => {
+    await requireSession('ADMIN');
+    const p = await api('/api/auth/mi-perfil');
+    const initials = ((p.name||'') + ' ' + (p.apellido||'')).trim().split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+    $('#avatar').textContent = initials || 'A';
+    $('#p-nombre').textContent = `${p.name||''} ${p.apellido||''}`.trim();
+    $('#p-username').textContent = p.username || '—';
+    $('#p-email').textContent = p.email || '—';
+    $('#p-completo').textContent = p.nombreCompleto || `${p.name} ${p.apellido}`;
+  })().catch(e => toast(e.message, 'error'));
+</script>
+</body>
+</html>
