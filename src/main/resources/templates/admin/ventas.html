@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Ventas')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('ventas')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Ventas</h1>
+        <p class="page-sub">Historial completo de todas las transacciones.</p>
+      </div>
+      <div class="user-chip" id="userChip"></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search"><i data-lucide="search"></i>
+        <input id="q" placeholder="Buscar por N° o cliente…" aria-label="Buscar venta" /></div>
+      <select id="fEstado">
+        <option value="">Todos los estados</option>
+        <option value="COMPLETADA">Completadas</option>
+        <option value="ANULADA">Anuladas</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>N° Venta</th><th>Cliente</th><th>Fecha</th>
+          <th class="num">Total</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="6"><div class="skel" style="height:50px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Modal detalle -->
+<div class="modal-backdrop" id="mdl-detalle">
+  <div class="modal lg" role="dialog" aria-modal="true">
+    <h3 id="d-numero">Detalle de venta</h3>
+    <p class="sub" id="d-meta"></p>
+    <div class="table-wrap" style="border:none;margin-bottom:16px">
+      <table>
+        <thead><tr><th>Producto</th><th>Lote</th><th class="num">Cant.</th><th class="num">P. Unit.</th><th class="num">Subtotal</th></tr></thead>
+        <tbody id="d-items"></tbody>
+      </table>
+    </div>
+    <div style="padding-top:12px;border-top:1px solid var(--color-border-soft);font-family:'Figtree'">
+      <div class="totales-grid" style="display:grid;grid-template-columns:1fr auto;gap:6px 24px;max-width:340px;margin-left:auto">
+        <span class="muted">Parcial</span><span class="num" id="d-parcial"></span>
+        <span class="muted">Descuento</span><span class="num" id="d-descuento"></span>
+        <span class="muted">Subtotal</span><span class="num" id="d-subtotal"></span>
+        <span class="muted">IVA</span><span class="num" id="d-iva"></span>
+        <span style="font-weight:800;font-size:18px">Total</span>
+        <span class="num" style="font-weight:800;font-size:18px" id="d-total"></span>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-start;padding-top:14px">
+      <div id="d-actions"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mdl-detalle')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let all = [];
+  (async () => {
+    const s = await requireSession('ADMIN'); paintUserChip(s);
+    all = await api('/api/admin/ventas');
+    render();
+    ['#q','#fEstado'].forEach(sel => $(sel).addEventListener('input', render));
+  })().catch(e => toast(e.message, 'error'));
+
+  function render() {
+    const q = $('#q').value.toLowerCase();
+    const est = $('#fEstado').value;
+    const list = all.filter(v =>
+      (!q || (v.numeroVenta||'').toLowerCase().includes(q) || (v.clienteNombre||'').toLowerCase().includes(q)) &&
+      (!est || v.estado === est)
+    );
+    const tb = $('#rows');
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="empty"><i data-lucide="inbox"></i><div>Sin ventas para mostrar.</div></td></tr>`;
+      lucide.createIcons(); return;
+    }
+    tb.innerHTML = list.map(v => `<tr>
+      <td><b>${v.numeroVenta || '#'+v.id}</b></td>
+      <td>${v.clienteNombre || '—'}</td>
+      <td class="muted">${fmtDateTime(v.fechaVenta)}</td>
+      <td class="num"><b>${fmtMoney(v.total)}</b></td>
+      <td><span class="pill ${v.estado==='ANULADA'?'red':'green'}">${v.estado}</span></td>
+      <td class="row-actions">
+        <button class="btn btn-sm btn-ghost btn-icon" title="Ver detalle" onclick="verDetalle(${v.id})">
+          <i data-lucide="eye"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+    lucide.createIcons();
+  }
+
+  async function verDetalle(id) {
+    try {
+      const v = await api(`/api/admin/ventas/${id}`);
+      $('#d-numero').textContent = `Venta ${v.numeroVenta || '#'+v.id}`;
+      $('#d-meta').textContent = `Cliente: ${v.clienteNombre} · ${fmtDateTime(v.fechaVenta)}`;
+      $('#d-parcial').textContent   = fmtMoney(v.parcial);
+      $('#d-descuento').textContent = (v.descuento || 0) + '%';
+      $('#d-subtotal').textContent  = fmtMoney(v.subtotal);
+      $('#d-iva').textContent       = fmtMoney(v.ivaMonto);
+      $('#d-total').textContent     = fmtMoney(v.total);
+      $('#d-items').innerHTML = (v.detalleVentas||[]).map(d => `<tr>
+        <td>${d.productoNombre}</td>
+        <td class="muted">${d.numeroLote || '—'}</td>
+        <td class="num">${d.cantidad}</td>
+        <td class="num">${fmtMoney(d.precioUnitario)}</td>
+        <td class="num"><b>${fmtMoney(d.subtotal)}</b></td>
+      </tr>`).join('');
+      const actions = $('#d-actions');
+      if (v.estado !== 'ANULADA') {
+        actions.innerHTML = `<button class="btn btn-danger" onclick="cancelar(${v.id})"><i data-lucide="x-circle"></i> Anular venta</button>`;
+        lucide.createIcons();
+      } else {
+        actions.innerHTML = `<span class="pill red">Venta anulada</span>`;
+      }
+      openModal('mdl-detalle');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function cancelar(id) {
+    if (!confirm('¿Anular esta venta? Esta acción no se puede deshacer.')) return;
+    try {
+      await api(`/api/admin/ventas/${id}/cancelar`, { method: 'PUT' });
+      toast('Venta anulada');
+      closeModal('mdl-detalle');
+      all = await api('/api/admin/ventas');
+      render();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+</script>
+</body>
+</html>
