@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Reportes')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('reportes')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Reportes</h1>
+        <p class="page-sub">Estadísticas de ventas, ingresos, clientes e inventario.</p>
+      </div>
+      <div style="display:flex; gap:14px; align-items:center;">
+        <label class="year-selector">
+          <i data-lucide="calendar-range"></i>
+          <span>Año</span>
+          <select id="yearSelect"></select>
+        </label>
+        <div class="user-chip" id="userChip"></div>
+      </div>
+    </div>
+
+    <!-- ── KPI cards ─────────────────────────────────────────────────────── -->
+    <section class="kpi-grid" aria-label="Indicadores clave">
+      <div class="kpi green">
+        <div class="kpi-head">
+          <p class="kpi-label">Ganancia del año</p>
+          <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+        </div>
+        <p class="kpi-value" id="k-gananciaAnio">$0</p>
+        <p class="kpi-foot">
+          <i data-lucide="calendar"></i><span id="k-anio">—</span> &nbsp;·&nbsp;
+          <span id="k-margenAnio">—</span> margen
+        </p>
+      </div>
+
+      <div class="kpi blue">
+        <div class="kpi-head">
+          <p class="kpi-label">Ingresos del año</p>
+          <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+        </div>
+        <p class="kpi-value" id="k-ingresosAnio">$0</p>
+        <p class="kpi-foot"><i data-lucide="receipt-text"></i>Gasto bruto: <span id="k-costosAnio">$0</span></p>
+      </div>
+
+      <div class="kpi red">
+        <div class="kpi-head">
+          <p class="kpi-label">Gasto bruto del año</p>
+          <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
+        </div>
+        <p class="kpi-value" id="k-gastosBruto">$0</p>
+        <p class="kpi-foot"><i data-lucide="calendar"></i>Inversión en lotes del año</p>
+      </div>
+
+
+      <div class="kpi green">
+        <div class="kpi-head">
+          <p class="kpi-label">Ventas completadas</p>
+          <div class="kpi-icon"><i data-lucide="circle-check"></i></div>
+        </div>
+        <p class="kpi-value" id="k-completadas">0</p>
+        <p class="kpi-foot"><i data-lucide="x-circle"></i><span id="k-anuladas">0</span> anuladas</p>
+      </div>
+
+      <div class="kpi amber">
+        <div class="kpi-head">
+          <p class="kpi-label">Productos bajo mínimo</p>
+          <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
+        </div>
+        <p class="kpi-value" id="k-bajoMin">0</p>
+        <p class="kpi-foot"><i data-lucide="package-x"></i><span id="k-sinStock">0</span> sin stock</p>
+      </div>
+
+      <div class="kpi red">
+        <div class="kpi-head">
+          <p class="kpi-label">Lotes vencidos</p>
+          <div class="kpi-icon"><i data-lucide="calendar-x"></i></div>
+        </div>
+        <p class="kpi-value" id="k-vencidos">0</p>
+        <p class="kpi-foot"><i data-lucide="clock"></i><span id="k-proxVencer">0</span> próximos a vencer</p>
+      </div>
+    </section>
+
+    <!-- ── Fila 1: Ingresos por mes + Ventas por mes ────────────────────── -->
+    <section class="two-col" style="margin-top:18px">
+      <div class="card chart-card">
+        <h2 class="section-title">
+          <i data-lucide="bar-chart-3"></i> Ingresos · Costos · Ganancia
+          <span class="muted" id="chartYearLabel"></span>
+        </h2>
+        <div class="chart-wrap"><canvas id="chartIngresos"></canvas></div>
+      </div>
+
+      <div class="card chart-card">
+        <h2 class="section-title">
+          <i data-lucide="line-chart"></i> Ventas por mes
+          <span class="muted" id="chartYearLabel2"></span>
+        </h2>
+        <div class="chart-wrap"><canvas id="chartVentas"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ── Fila 2: Estado ventas + Top clientes ─────────────────────────── -->
+    <section class="two-col" style="margin-top:18px">
+      <div class="card chart-card">
+        <h2 class="section-title"><i data-lucide="pie-chart"></i> Distribución de ventas</h2>
+        <div class="chart-wrap"><canvas id="chartEstados"></canvas></div>
+      </div>
+
+      <div class="card chart-card">
+        <h2 class="section-title"><i data-lucide="trophy"></i> Top 5 clientes</h2>
+        <div class="chart-wrap"><canvas id="chartTopClientes"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ── Acciones PL/SQL (texto, colapsable) ──────────────────────────── -->
+    <section class="card" style="margin-top:18px">
+      <details>
+        <summary class="section-title" style="cursor:pointer;list-style:revert">
+          <i data-lucide="terminal"></i> Acciones avanzadas (PL/SQL)
+        </summary>
+
+        <div class="actions-grid">
+          <div class="action-block">
+            <h3>Resumen de ventas de un mes</h3>
+            <div class="toolbar">
+              <input id="rMes"  type="number" min="1"    max="12"   placeholder="Mes (1-12)" />
+              <input id="rAnio" type="number" min="2000" max="2100" placeholder="Año" />
+              <button class="btn" id="btnResumen">Ejecutar resumen</button>
+            </div>
+            <pre class="terminal" id="outResumen">—</pre>
+          </div>
+
+          <div class="action-block">
+            <h3>Stock bajo el mínimo (detalle)</h3>
+            <div class="toolbar">
+              <button class="btn" id="btnStockTxt">Listar productos con stock bajo</button>
+            </div>
+            <pre class="terminal" id="outStock">—</pre>
+          </div>
+
+          <div class="action-block">
+            <h3>Desactivar lotes vencidos</h3>
+            <div class="toolbar">
+              <button class="btn danger" id="btnDesact">Ejecutar procedure</button>
+            </div>
+            <pre class="terminal" id="outDesact">—</pre>
+          </div>
+
+          <div class="action-block">
+            <h3>Actualizar precio de un lote</h3>
+            <div class="toolbar">
+              <input id="pLoteId" type="number" min="1"    placeholder="ID lote" />
+              <input id="pPrecio" type="number" min="0.01" step="0.01" placeholder="Nuevo precio" />
+              <button class="btn" id="btnPrecio">Actualizar</button>
+            </div>
+            <pre class="terminal" id="outPrecio">—</pre>
+          </div>
+
+          <div class="action-block">
+            <h3>Total compras de un cliente</h3>
+            <div class="toolbar">
+              <input id="cCedula" placeholder="Cédula del cliente" />
+              <button class="btn" id="btnTotalCliente">Calcular</button>
+            </div>
+            <pre class="terminal" id="outCliente">—</pre>
+          </div>
+        </div>
+      </details>
+    </section>
+  </main>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+
+<style>
+  .chart-card { display:flex; flex-direction:column; }
+  .chart-wrap { position:relative; height:280px; margin-top:8px; }
+  .chart-card .section-title .muted { color: var(--ink-300); font-weight:400; font-size:.9rem; margin-left:4px; }
+
+  .year-selector {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 6px 10px 6px 12px;
+    color: var(--ink-100);
+    font-size: .9rem;
+  }
+  .year-selector i { width: 16px; height: 16px; color: var(--color-text-soft); }
+  .year-selector span { color: var(--color-text-soft); }
+  .year-selector select {
+    background: transparent; color: var(--ink-100);
+    border: none; outline: none;
+    font-size: .9rem; font-weight: 600;
+    padding: 2px 4px;
+    cursor: pointer;
+  }
+  .year-selector select option { background: var(--color-surface); color: var(--ink-100); }
+
+  .actions-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+    gap:16px; margin-top:16px;
+  }
+  .action-block h3 { font-size:.95rem; margin:0 0 8px; color: var(--ink-100); }
+
+  .toolbar {
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px;
+  }
+  .toolbar input {
+    background: var(--color-surface-2); color: var(--ink-100);
+    border:1px solid var(--color-border); border-radius:8px;
+    padding:6px 10px; font-size:.85rem;
+  }
+  .toolbar input:focus { outline: 2px solid var(--color-ring); outline-offset:1px; }
+
+  .btn {
+    padding:8px 14px; border-radius:8px; border:none; cursor:pointer;
+    background: var(--color-primary); color: var(--color-on-primary);
+    font-size:.85rem; font-weight:500;
+  }
+  .btn:hover { background: var(--color-primary-hover); }
+  .btn.danger { background: var(--color-destructive); }
+  .btn.danger:hover { filter: brightness(0.9); }
+
+  .terminal {
+    background: oklch(0.108 0.006 145);
+    color: oklch(0.840 0.120 152);
+    padding:12px; border-radius:10px;
+    font-family: ui-monospace, Consolas, monospace; font-size:.8rem;
+    white-space:pre-wrap; min-height:50px; max-height:240px; overflow:auto;
+    border:1px solid var(--color-border);
+  }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  const MES_NOMBRES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const fmtMoneyShort = (n) => {
+    const v = Number(n || 0);
+    if (v >= 1_000_000) return '$' + (v/1_000_000).toFixed(1) + 'M';
+    if (v >= 1_000)     return '$' + (v/1_000).toFixed(0) + 'k';
+    return '$' + v.toFixed(0);
+  };
+  function chartTheme() {
+    const isDark = (document.documentElement.dataset.theme || 'dark') === 'dark';
+    return {
+      text:   isDark ? '#ECEEEA' : '#1F2937',
+      muted:  isDark ? '#A9ADA6' : '#6B7280',
+      grid:   isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      primary: '#15803D',
+      primarySoft: 'rgba(21,128,61,0.20)',
+      accent:  '#86EFAC',
+      blue:    '#0369A1',
+      red:     '#DC2626',
+      amber:   '#F59E0B',
+      palette: ['#15803D', '#0369A1', '#86EFAC', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2']
+    };
+  }
+  function fmtLine(lines){ return Array.isArray(lines) && lines.length ? lines.join('\n') : '(sin salida)'; }
+  function setOut(id, content){ document.getElementById(id).textContent = content; }
+
+  // ── Estado a nivel de módulo ────────────────────────────────────────────
+  let chartIngresos    = null;  // depende del año
+  let chartVentas      = null;  // depende del año
+  let chartEstados     = null;  // independiente
+  let chartTopClientes = null;  // independiente
+  const theme = chartTheme();
+  const mesesIdx = Array.from({length:12}, (_,i) => i + 1);
+
+  // ── Carga de datos dependientes del año ─────────────────────────────────
+  async function loadYearData(anio) {
+    document.getElementById('k-anio').textContent          = anio;
+    document.getElementById('chartYearLabel').textContent  = '· ' + anio;
+    document.getElementById('chartYearLabel2').textContent = '· ' + anio;
+
+    const [finanzasAnio, ingresosMeses, costosMeses, ventasMeses] = await Promise.all([
+      api(`/api/admin/reportes/costos-anio/${anio}`),
+      Promise.all(mesesIdx.map(m =>
+        api(`/api/admin/reportes/ingresos-mes/${m}/${anio}`)
+            .then(r => Number(r.ingresos || 0)).catch(() => 0)
+      )),
+      Promise.all(mesesIdx.map(m =>
+        api(`/api/admin/reportes/costos-mes/${m}/${anio}`)
+            .then(r => Number(r.costos || 0)).catch(() => 0)
+      )),
+      Promise.all(mesesIdx.map(m =>
+        api(`/api/admin/reportes/ventas-mes-count/${m}/${anio}`)
+            .then(r => Number(r.total || 0)).catch(() => 0)
+      ))
+    ]);
+
+    const gananciasMeses = ingresosMeses.map((ing, i) => ing - costosMeses[i]);
+
+    const ingAnio = Number(finanzasAnio.ingresos || 0);
+    const cosAnio = Number(finanzasAnio.costos   || 0);
+    const ganAnio = Number(finanzasAnio.ganancia || 0);
+    const margen  = ingAnio > 0 ? (ganAnio / ingAnio * 100) : 0;
+
+    document.getElementById('k-gananciaAnio').textContent  = fmtMoney(ganAnio);
+    document.getElementById('k-margenAnio').textContent    = margen.toFixed(1) + '%';
+    document.getElementById('k-ingresosAnio').textContent  = fmtMoney(ingAnio);
+    document.getElementById('k-costosAnio').textContent    = fmtMoney(cosAnio);
+    document.getElementById('k-gastosBruto').textContent   = fmtMoney(cosAnio);
+
+    // Recrear las gráficas dependientes del año
+    if (chartIngresos) chartIngresos.destroy();
+    chartIngresos = new Chart(document.getElementById('chartIngresos'), {
+        type: 'bar',
+        data: {
+          labels: MES_NOMBRES,
+          datasets: [
+            {
+              label: 'Ingresos',
+              type:  'bar',
+              data:  ingresosMeses,
+              backgroundColor: theme.primarySoft,
+              borderColor:     theme.primary,
+              borderWidth: 2,
+              borderRadius: 6,
+              order: 2
+            },
+            {
+              label: 'Costos',
+              type:  'bar',
+              data:  costosMeses,
+              backgroundColor: 'rgba(220,38,38,0.20)',
+              borderColor:     theme.red,
+              borderWidth: 2,
+              borderRadius: 6,
+              order: 2
+            },
+            {
+              label: 'Ganancia',
+              type:  'line',
+              data:  gananciasMeses,
+              borderColor:          theme.accent,
+              backgroundColor:      'rgba(134,239,172,0.12)',
+              borderWidth:          2.5,
+              tension:              0.35,
+              fill:                 false,
+              pointBackgroundColor: theme.accent,
+              pointBorderColor:     theme.accent,
+              pointRadius:          4,
+              pointHoverRadius:     6,
+              order: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 12, boxWidth: 14 } },
+            tooltip: {
+              callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtMoney(ctx.parsed.y) }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => fmtMoneyShort(v) } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+    // ── Line: Ventas por mes ────────────────────────────────────────────
+    if (chartVentas) chartVentas.destroy();
+    chartVentas = new Chart(document.getElementById('chartVentas'), {
+      type: 'line',
+      data: {
+        labels: MES_NOMBRES,
+        datasets: [{
+          label: 'Ventas',
+          data: ventasMeses,
+          borderColor: theme.accent,
+          backgroundColor: 'rgba(134,239,172,0.16)',
+          borderWidth: 2.5,
+          tension: 0.35,
+          fill: true,
+          pointBackgroundColor: theme.accent,
+          pointBorderColor: theme.accent,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: { label: ctx => 'Ventas: ' + ctx.parsed.y }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  } // end loadYearData
+
+  // ── Carga de datos independientes del año (dashboard, top clientes, etc.) ─
+  async function loadStaticData() {
+    const [dashboard, conteos, topClientes, proxVencer] = await Promise.all([
+      api('/api/admin/dashboard'),
+      api('/api/admin/reportes/conteos-inventario'),
+      api('/api/admin/reportes/top-clientes-datos?top=5').catch(() => []),
+      api('/api/admin/productos/proximos-vencer').catch(() => [])
+    ]);
+
+    document.getElementById('k-completadas').textContent = dashboard.ventasCompletadas;
+    document.getElementById('k-anuladas').textContent    = dashboard.ventasAnuladas;
+    document.getElementById('k-bajoMin').textContent     = conteos.productosBajoMinimo;
+    document.getElementById('k-sinStock').textContent    = dashboard.productosSinStock;
+    document.getElementById('k-vencidos').textContent    = conteos.lotesVencidos;
+    document.getElementById('k-proxVencer').textContent  = proxVencer.length;
+
+    // ── Doughnut: Estado de ventas ──────────────────────────────────────
+    chartEstados = new Chart(document.getElementById('chartEstados'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Completadas', 'Anuladas'],
+          datasets: [{
+            data: [dashboard.ventasCompletadas, dashboard.ventasAnuladas],
+            backgroundColor: [theme.primary, theme.red],
+            borderColor: theme.grid,
+            borderWidth: 2,
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 16 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                  const pct = total ? Math.round((ctx.parsed / total) * 100) : 0;
+                  return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+    // ── Horizontal Bar: Top clientes ────────────────────────────────────
+    const topLabels = topClientes.length
+      ? topClientes.map(c => c.nombreCompleto || (c.nombre + ' ' + (c.apellido || '')))
+      : ['Sin datos'];
+    const topValues = topClientes.length
+      ? topClientes.map(c => Number(c.totalGastado || 0))
+      : [0];
+
+    chartTopClientes = new Chart(document.getElementById('chartTopClientes'), {
+        type: 'bar',
+        data: {
+          labels: topLabels,
+          datasets: [{
+            label: 'Total gastado',
+            data: topValues,
+            backgroundColor: theme.palette.slice(0, topValues.length),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const c = topClientes[ctx.dataIndex];
+                  return c
+                    ? `${fmtMoney(c.totalGastado)} · ${c.numCompras} compras`
+                    : fmtMoney(ctx.parsed.x);
+                }
+              }
+            }
+          },
+        scales: {
+          x: { beginAtZero: true, ticks: { callback: v => fmtMoneyShort(v) } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+  } // end loadStaticData
+
+  // ── Selector de año ─────────────────────────────────────────────────────
+  function populateYearSelector(currentYear) {
+    const sel = document.getElementById('yearSelect');
+    for (let y = currentYear; y >= currentYear - 4; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      sel.appendChild(opt);
+    }
+    sel.value = currentYear;
+  }
+
+  // ── Bootstrap ───────────────────────────────────────────────────────────
+  (async () => {
+    const session = await requireSession('ADMIN');
+    paintUserChip(session);
+
+    Chart.defaults.color       = theme.muted;
+    Chart.defaults.borderColor = theme.grid;
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+    const anioActual = new Date().getFullYear();
+    populateYearSelector(anioActual);
+
+    try {
+      await Promise.all([
+        loadStaticData(),
+        loadYearData(anioActual)
+      ]);
+      lucide.createIcons();
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+
+    document.getElementById('yearSelect').addEventListener('change', async (e) => {
+      try {
+        await loadYearData(+e.target.value);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    });
+  })().catch(e => toast(e.message, 'error'));
+
+  // ── Acciones PL/SQL ─────────────────────────────────────────────────────
+  document.getElementById('btnResumen').onclick = async () => {
+    const m = +document.getElementById('rMes').value;
+    const a = +document.getElementById('rAnio').value;
+    if (!m || !a) return toast('Indica mes y año', 'warn');
+    try {
+      const r = await api(`/api/admin/reportes/resumen-ventas/${m}/${a}`);
+      setOut('outResumen', fmtLine(r.lineas));
+    } catch (e) { setOut('outResumen', 'ERROR: ' + e.message); }
+  };
+
+  document.getElementById('btnStockTxt').onclick = async () => {
+    try {
+      const r = await api('/api/admin/reportes/stock-bajo');
+      setOut('outStock', fmtLine(r.lineas));
+    } catch (e) { setOut('outStock', 'ERROR: ' + e.message); }
+  };
+
+  document.getElementById('btnDesact').onclick = async () => {
+    if (!confirm('¿Desactivar todos los lotes con fecha de vencimiento pasada?')) return;
+    try {
+      const r = await api('/api/admin/reportes/desactivar-lotes-vencidos', { method: 'POST' });
+      setOut('outDesact', fmtLine(r.lineas));
+      toast('Procedimiento ejecutado', 'success');
+    } catch (e) { setOut('outDesact', 'ERROR: ' + e.message); }
+  };
+
+  document.getElementById('btnPrecio').onclick = async () => {
+    const id = +document.getElementById('pLoteId').value;
+    const p  = +document.getElementById('pPrecio').value;
+    if (!id || !p) return toast('Indica ID del lote y precio', 'warn');
+    try {
+      const r = await api(`/api/admin/reportes/actualizar-precio-lote/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ precio: p })
+      });
+      setOut('outPrecio', fmtLine(r.lineas));
+    } catch (e) { setOut('outPrecio', 'ERROR: ' + e.message); }
+  };
+
+  document.getElementById('btnTotalCliente').onclick = async () => {
+    const c = document.getElementById('cCedula').value.trim();
+    if (!c) return toast('Indica la cédula', 'warn');
+    try {
+      const r = await api(`/api/admin/reportes/total-compras/${encodeURIComponent(c)}`);
+      setOut('outCliente', `Cliente ${r.cedula} → total compras COMPLETADAS: ${fmtMoney(r.total)}`);
+    } catch (e) { setOut('outCliente', 'ERROR: ' + e.message); }
+  };
+</script>
+</body>
+</html>
