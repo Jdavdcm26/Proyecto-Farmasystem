@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Categorías')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('categorias')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Categorías</h1>
+        <p class="page-sub">Organiza tus productos por familias farmacéuticas.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openNew()"><i data-lucide="plus"></i> Nueva categoría</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="search"><i data-lucide="search"></i><input id="q" placeholder="Buscar categoría…" /></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="4"><div class="skel" style="height:50px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="mdl">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="mdl-title">Nueva categoría</h3>
+    <p class="sub">Las categorías permiten clasificar los productos del catálogo.</p>
+    <div id="mdl-alert"></div>
+    <form id="mdl-form">
+      <input type="hidden" name="id" />
+      <div class="field"><label>Nombre <span class="req">*</span></label>
+        <div class="ctrl"><i data-lucide="tag" class="lead"></i><input name="nombre" required maxlength="35" /></div></div>
+      <div class="field"><label>Descripción</label>
+        <div class="ctrl no-icon"><textarea name="descripcion" rows="2" maxlength="50"></textarea></div></div>
+      <div class="field"><label>Estado</label>
+        <div class="ctrl no-icon"><select name="activo"><option value="true">Activa</option><option value="false">Inactiva</option></select></div></div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('mdl')">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons(); let all=[]; let userId;
+  (async ()=>{ const s=await requireSession('ADMIN'); userId=s.userId; await load(); $('#q').addEventListener('input', render); })()
+    .catch(e=>toast(e.message,'error'));
+
+  async function load(){ all = await api('/api/admin/categorias'); render(); }
+  function render(){
+    const q = $('#q').value.toLowerCase();
+    const list = all.filter(c => !q || c.nombre.toLowerCase().includes(q));
+    const tb = $('#rows');
+    if (!list.length){ tb.innerHTML=`<tr><td colspan="4" class="empty"><i data-lucide="tags"></i><div>Sin categorías.</div></td></tr>`; lucide.createIcons(); return; }
+    tb.innerHTML = list.map(c=>`<tr>
+      <td><b>${c.nombre}</b></td>
+      <td class="muted">${c.descripcion||'—'}</td>
+      <td>${c.activo?`<span class="pill green">Activa</span>`:`<span class="pill gray">Inactiva</span>`}</td>
+      <td class="row-actions">
+        <button class="btn btn-sm btn-icon btn-ghost" onclick='openEdit(${JSON.stringify(c)})' title="Editar"><i data-lucide="pencil"></i></button>
+        <button class="btn btn-sm btn-icon btn-danger" onclick="del(${c.id})" title="Eliminar"><i data-lucide="trash-2"></i></button>
+      </td></tr>`).join('');
+    lucide.createIcons();
+  }
+  function openNew(){
+    $('#mdl-title').textContent='Nueva categoría';
+    const f=$('#mdl-form');
+    f.reset();
+    f.querySelector('[name=id]').value = '';
+    openModal('mdl');
+  }
+  function openEdit(c){
+    $('#mdl-title').textContent='Editar categoría';
+    const f=$('#mdl-form');
+    f.querySelector('[name=id]').value        = c.id;
+    f.querySelector('[name=nombre]').value    = c.nombre;
+    f.querySelector('[name=descripcion]').value = c.descripcion || '';
+    f.querySelector('[name=activo]').value    = c.activo ? 'true' : 'false';
+    openModal('mdl');
+  }
+  $('#mdl-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd=Object.fromEntries(new FormData(e.target).entries());
+    const body={nombre:fd.nombre, descripcion:fd.descripcion||null, activo:fd.activo==='true', userId};
+    try{
+      if (fd.id) await api(`/api/admin/categorias/${fd.id}`, {method:'PUT', body:JSON.stringify(body)});
+      else       await api(`/api/admin/categorias`,            {method:'POST', body:JSON.stringify(body)});
+      closeModal('mdl'); toast('Categoría guardada'); load();
+    } catch(err){ $('#mdl-alert').innerHTML=`<div class="alert error"><i data-lucide="circle-alert"></i><span>${err.message}</span></div>`; lucide.createIcons(); }
+  });
+  async function del(id){
+    if(!confirm('¿Eliminar esta categoría?')) return;
+    try{ await api(`/api/admin/categorias/${id}`, {method:'DELETE'}); toast('Categoría eliminada'); load(); }
+    catch(e){ toast(e.message,'error'); }
+  }
+</script>
+</body>
+</html>
