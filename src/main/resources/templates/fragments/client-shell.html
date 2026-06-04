@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title th:text="${title} + ' · FarmaSystem'">FarmaSystem</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}" />
+  <link rel="stylesheet" th:href="@{/css/styles.css}" />
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<nav th:fragment="navbar(active)" class="navbar">
+  <div class="brand">
+    <div class="brand-logo">
+      <img th:src="@{/img/logo-white.svg}" alt="" width="17" height="17" aria-hidden="true" />
+    </div>
+    <span class="brand-title">FarmaSystem</span>
+  </div>
+  <nav>
+    <a th:classappend="${active=='tienda'}?'active'" th:href="@{/tienda}">
+      <i data-lucide="shopping-bag"></i><span>Tienda</span>
+    </a>
+    <a th:classappend="${active=='consulta-ia'}?'active'" th:href="@{/consulta-ia}">
+      <i data-lucide="bot"></i><span>Consulta IA</span>
+    </a>
+    <a th:classappend="${active=='mis-compras'}?'active'" th:href="@{/mis-compras}">
+      <i data-lucide="receipt"></i><span>Mis Compras</span>
+    </a>
+    <a th:classappend="${active=='mi-perfil'}?'active'" th:href="@{/mi-perfil}">
+      <i data-lucide="user"></i><span>Mi Perfil</span>
+    </a>
+    <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar tema" title="Cambiar tema">
+      <i data-lucide="sun-moon"></i>
+    </button>
+    <a href="#" onclick="logout();return false;">
+      <i data-lucide="log-out"></i><span>Salir</span>
+    </a>
+  </nav>
+</nav>
+
+<div th:fragment="toasts" class="toast-host" aria-live="polite"></div>
+</body>
+</html>
