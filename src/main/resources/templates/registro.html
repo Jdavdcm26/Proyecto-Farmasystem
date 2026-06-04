@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crear cuenta · FarmaSystem</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}" />
+  <link rel="stylesheet" th:href="@{/css/styles.css}" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { background: #111210; }
+
+    .auth-page {
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Dot grid fondo */
+    .auth-page::before {
+      content: "";
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(circle at 1px 1px, oklch(0.22 0.008 145 / 0.55) 1px, transparent 0);
+      background-size: 22px 22px;
+      pointer-events: none;
+    }
+
+    /* Un único gradiente limpio desde la izquierda */
+    .auth-page::after {
+      content: "";
+      position: fixed; inset: 0; z-index: 1;
+      background: radial-gradient(
+        ellipse 65% 80% at -5% 50%,
+        oklch(0.381 0.118 145 / 0.22) 0%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Columna izquierda */
+    .auth-left {
+      position: relative; z-index: 2;
+      padding: 48px 52px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .auth-brand { display: flex; align-items: center; gap: 14px; }
+    .auth-brand-logo {
+      width: 46px; height: 46px;
+      background: oklch(1 0 0 / 0.10);
+      border: 1px solid oklch(1 0 0 / 0.15);
+      border-radius: 14px;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .auth-brand-name {
+      font-family: 'Figtree', sans-serif; font-size: 20px; font-weight: 800;
+      color: oklch(0.938 0.005 145); letter-spacing: -0.02em; margin: 0;
+    }
+    .auth-brand-sub {
+      font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+      color: oklch(0.698 0.007 145); margin: 0;
+    }
+
+    .auth-pitch { max-width: 400px; }
+    .auth-pitch h2 {
+      font-family: 'Figtree', sans-serif; font-size: 34px; font-weight: 900;
+      line-height: 1.1; letter-spacing: -0.03em;
+      color: oklch(0.938 0.005 145); margin: 0 0 12px;
+    }
+    .auth-pitch h2 em { font-style: normal; color: oklch(0.840 0.120 152); }
+    .auth-pitch p {
+      font-size: 14px; line-height: 1.65;
+      color: oklch(0.698 0.007 145); margin: 0 0 28px; max-width: 36ch;
+    }
+    .auth-feats { list-style: none; padding: 0; margin: 0; display: grid; gap: 9px; }
+    .auth-feats li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: oklch(0.698 0.007 145); }
+    .auth-feats li i { width: 15px; height: 15px; color: oklch(0.840 0.120 152); flex-shrink: 0; }
+    .auth-left-foot { font-size: 12px; letter-spacing: .08em; color: oklch(0.504 0.007 145); }
+
+    /* Columna derecha */
+    .auth-right {
+      position: relative; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+      padding: 36px 40px;
+    }
+
+    .auth-card-wrap { position: relative; width: 100%; max-width: 620px; }
+
+    .auth-form-card {
+      position: relative;
+      background: oklch(0.136 0.006 145 / 0.95);
+      border: 1px solid oklch(0.470 0.148 145 / 0.55);
+      border-radius: 20px; padding: 36px 40px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow:
+        0 0 8px  oklch(0.381 0.118 145 / 0.50),
+        0 0 24px oklch(0.381 0.118 145 / 0.28),
+        0 0 60px oklch(0.381 0.118 145 / 0.14),
+        0 24px 64px oklch(0 0 0 / 0.60);
+      animation: card-breathe 3s ease-in-out infinite alternate;
+    }
+    .auth-form-card::before {
+      content: "";
+      position: absolute; top: 0; left: 20px; right: 20px; height: 1px;
+      background: linear-gradient(to right, transparent, oklch(0.840 0.120 152 / 0.70) 40%, oklch(0.840 0.120 152 / 0.70) 60%, transparent);
+    }
+    @keyframes card-breathe {
+      from { box-shadow: 0 0 8px oklch(0.381 0.118 145 / 0.45), 0 0 24px oklch(0.381 0.118 145 / 0.24), 0 0 60px oklch(0.381 0.118 145 / 0.12), 0 24px 64px oklch(0 0 0 / 0.60); }
+      to   { box-shadow: 0 0 12px oklch(0.381 0.118 145 / 0.65), 0 0 36px oklch(0.381 0.118 145 / 0.38), 0 0 80px oklch(0.381 0.118 145 / 0.20), 0 24px 64px oklch(0 0 0 / 0.60); }
+    }
+
+    .form-eyebrow {
+      font-size: 10px; letter-spacing: .22em; text-transform: uppercase;
+      font-weight: 700; color: oklch(0.840 0.120 152); margin: 0 0 10px;
+    }
+    .form-title {
+      font-family: 'Figtree', sans-serif; font-size: 24px; font-weight: 800;
+      color: oklch(0.938 0.005 145); margin: 0 0 5px; letter-spacing: -0.025em;
+    }
+    .form-sub { font-size: 14px; color: oklch(0.504 0.007 145); margin: 0 0 24px; line-height: 1.55; }
+    .form-foot {
+      margin-top: 20px; text-align: center;
+      font-size: 13px; color: oklch(0.504 0.007 145);
+    }
+    .form-foot a { color: oklch(0.840 0.120 152); font-weight: 600; text-decoration: none; }
+    .form-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 960px) {
+      .auth-page { grid-template-columns: 1fr; }
+      .auth-left { display: none; }
+      .auth-right { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+
+<div class="auth-page">
+
+  <!-- Columna izquierda -->
+  <aside class="auth-left" aria-hidden="true">
+    <div class="auth-brand">
+      <div class="auth-brand-logo">
+        <img th:src="@{/img/logo-white.svg}" alt="" width="22" height="22" />
+      </div>
+      <div>
+        <p class="auth-brand-sub">Sistema Farmacéutico</p>
+        <h1 class="auth-brand-name">FarmaSystem</h1>
+      </div>
+    </div>
+
+    <div class="auth-pitch">
+      <h2>Tu salud,<br>un par de <em>clics.</em></h2>
+      <p>Crea tu cuenta y accede al catálogo completo de medicamentos y productos de salud.</p>
+      <ul class="auth-feats">
+        <li><i data-lucide="package-check"></i><span>Confirmación inmediata de cada pedido</span></li>
+        <li><i data-lucide="receipt"></i><span>Historial completo de tus compras</span></li>
+        <li><i data-lucide="bot"></i><span>Consulta de IA para encontrar lo que necesitas</span></li>
+        <li><i data-lucide="lock-keyhole"></i><span>Tus datos protegidos con cuidado</span></li>
+      </ul>
+    </div>
+
+    <p class="auth-left-foot">© 2026 FarmaSystem</p>
+  </aside>
+
+  <!-- Columna derecha -->
+  <main id="main" class="auth-right">
+    <div class="auth-card-wrap">
+      <div class="auth-form-card">
+        <p class="form-eyebrow">Registro de cliente</p>
+        <h2 class="form-title">Crea tu cuenta</h2>
+        <p class="form-sub">Solo necesitamos algunos datos para empezar.</p>
+
+        <div id="alert" role="alert" aria-live="polite"></div>
+
+        <form id="regForm" novalidate>
+          <div class="grid-2">
+            <div class="field">
+              <label for="name">Nombre <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="user" class="lead"></i><input id="name" name="name" required maxlength="50" /></div>
+            </div>
+            <div class="field">
+              <label for="apellido">Apellido <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="user" class="lead"></i><input id="apellido" name="apellido" required maxlength="50" /></div>
+            </div>
+            <div class="field">
+              <label for="cedula">Cédula <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="badge" class="lead"></i><input id="cedula" name="cedula" required maxlength="20" inputmode="numeric" /></div>
+            </div>
+            <div class="field">
+              <label for="telefono">Teléfono <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="phone" class="lead"></i><input id="telefono" name="telefono" type="tel" required maxlength="15" /></div>
+            </div>
+            <div class="field">
+              <label for="username">Usuario <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="at-sign" class="lead"></i><input id="username" name="username" required pattern="^[a-zA-Z0-9_]+$" maxlength="30" autocomplete="username" /></div>
+              <span class="help">Solo letras, números y guion bajo.</span>
+            </div>
+            <div class="field">
+              <label for="email">Correo electrónico <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="mail" class="lead"></i><input id="email" name="email" type="email" required maxlength="50" autocomplete="email" /></div>
+            </div>
+            <div class="field">
+              <label for="password">Contraseña <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="lock" class="lead"></i><input id="password" name="password" type="password" required minlength="6" maxlength="50" autocomplete="new-password" /></div>
+              <span class="help">Mínimo 6 caracteres, con letras y números.</span>
+            </div>
+            <div class="field">
+              <label for="direccion">Dirección <span class="req">*</span></label>
+              <div class="ctrl"><i data-lucide="map-pin" class="lead"></i><input id="direccion" name="direccion" required maxlength="50" autocomplete="street-address" /></div>
+            </div>
+          </div>
+          <div class="auth-actions" style="margin-top:4px">
+            <button class="btn btn-primary btn-block" type="submit">
+              <i data-lucide="user-plus"></i> Crear cuenta
+            </button>
+          </div>
+        </form>
+
+        <p class="form-foot">¿Ya tienes cuenta? <a th:href="@{/login}">Inicia sesión</a></p>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  $('#regForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    const alertEl = $('#alert'); alertEl.innerHTML = '';
+    const btn = e.target.querySelector('button'); btn.disabled = true;
+    try {
+      await api('/api/auth/registro', { method: 'POST', body: JSON.stringify(body) });
+      alertEl.innerHTML = `<div class="alert success"><i data-lucide="circle-check"></i><span>Cuenta creada. Te llevamos al inicio de sesión…</span></div>`;
+      lucide.createIcons();
+      setTimeout(() => window.location.href = '/login', 1200);
+    } catch (err) {
+      alertEl.innerHTML = `<div class="alert error"><i data-lucide="circle-alert"></i><span>${err.message}</span></div>`;
+      lucide.createIcons(); btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
