@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/client-shell :: head('Mis Compras')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div th:replace="~{fragments/client-shell :: navbar('mis-compras')}"></div>
+
+<main id="main" class="client-main">
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">Mis Compras</h1>
+      <p class="page-sub">Historial de todos tus pedidos en FarmaSystem.</p>
+    </div>
+    <div class="user-chip" id="userChip"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <i data-lucide="search"></i>
+      <input id="q" placeholder="Buscar por N° de venta…" aria-label="Buscar compra" />
+    </div>
+    <select id="fEstado">
+      <option value="">Todos los estados</option>
+      <option value="COMPLETADA">Completadas</option>
+      <option value="ANULADA">Anuladas</option>
+    </select>
+  </div>
+
+  <div id="lista"></div>
+</main>
+
+<!-- Modal detalle -->
+<div class="modal-backdrop" id="mdl-detalle">
+  <div class="modal lg" role="dialog" aria-modal="true">
+    <h3 id="d-numero">Detalle de compra</h3>
+    <p class="sub" id="d-fecha"></p>
+    <div class="table-wrap" style="border:none;margin-bottom:16px">
+      <table>
+        <thead><tr><th>Producto</th><th>Lote</th><th class="num">Cant.</th><th class="num">P. Unitario</th><th class="num">Subtotal</th></tr></thead>
+        <tbody id="d-items"></tbody>
+      </table>
+    </div>
+    <div style="padding-top:12px;border-top:1px solid var(--color-border-soft);font-family:'Figtree'">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:6px 24px;max-width:340px;margin-left:auto">
+        <span class="muted">Parcial</span><span class="num" id="d-parcial"></span>
+        <span class="muted">Descuento</span><span class="num" id="d-descuento"></span>
+        <span class="muted">Subtotal</span><span class="num" id="d-subtotal"></span>
+        <span class="muted">IVA</span><span class="num" id="d-iva"></span>
+        <span style="font-weight:800;font-size:18px">Total</span>
+        <span class="num" style="font-weight:800;font-size:18px" id="d-total"></span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('mdl-detalle')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{fragments/client-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let all = [];
+
+  (async () => {
+    const s = await requireSession('CLIENT'); paintUserChip(s);
+    all = await api('/api/mis-compras');
+    render();
+    ['#q','#fEstado'].forEach(sel => $(sel).addEventListener('input', render));
+  })().catch(e => toast(e.message, 'error'));
+
+  function render() {
+    const q = $('#q').value.toLowerCase();
+    const est = $('#fEstado').value;
+    const list = all.filter(v =>
+      (!q || (v.numeroVenta||'').toLowerCase().includes(q)) &&
+      (!est || v.estado === est)
+    );
+    const container = $('#lista');
+    if (!list.length) {
+      container.innerHTML = `<div style="text-align:center;padding:80px 20px;color:var(--color-text-muted)">
+        <i data-lucide="receipt" style="width:48px;height:48px;color:#CBD5E1;margin-bottom:14px"></i>
+        <p style="font-size:15px">Aún no tienes compras registradas.</p>
+        <a href="/tienda" class="btn btn-primary" style="margin-top:14px"><i data-lucide="shopping-bag"></i> Ir a la tienda</a>
+      </div>`;
+      lucide.createIcons(); return;
+    }
+    container.innerHTML = list.map(v => `
+      <div class="compra-card" onclick='verDetalle(${JSON.stringify(v)})' role="button" tabindex="0">
+        <div class="compra-icon">
+          <i data-lucide="receipt"></i>
+        </div>
+        <div class="compra-body">
+          <p class="compra-num">${v.numeroVenta || '#'+v.id}</p>
+          <p class="compra-meta">${fmtDateTime(v.fechaVenta)} · ${(v.detalleVentas||[]).length} producto(s)</p>
+        </div>
+        <div class="compra-end">
+          <span class="pill ${v.estado==='ANULADA'?'red':'green'}">${v.estado}</span>
+          <span class="compra-total">${fmtMoney(v.total)}</span>
+          <i data-lucide="chevron-right" style="color:var(--color-text-muted);width:16px;height:16px;flex-shrink:0"></i>
+        </div>
+      </div>`).join('');
+    lucide.createIcons();
+  }
+
+  function verDetalle(v) {
+    $('#d-numero').textContent    = `Compra ${v.numeroVenta || '#'+v.id}`;
+    $('#d-fecha').textContent     = fmtDateTime(v.fechaVenta);
+    $('#d-parcial').textContent   = fmtMoney(v.parcial);
+    $('#d-descuento').textContent = (v.descuento || 0) + '%';
+    $('#d-subtotal').textContent  = fmtMoney(v.subtotal);
+    $('#d-iva').textContent       = fmtMoney(v.ivaMonto);
+    $('#d-total').textContent     = fmtMoney(v.total);
+    $('#d-items').innerHTML = (v.detalleVentas||[]).map(d => `<tr>
+      <td>${d.productoNombre}</td>
+      <td class="muted">${d.numeroLote || '—'}</td>
+      <td class="num">${d.cantidad}</td>
+      <td class="num">${fmtMoney(d.precioUnitario)}</td>
+      <td class="num"><b>${fmtMoney(d.subtotal)}</b></td>
+    </tr>`).join('');
+    openModal('mdl-detalle');
+  }
+</script>
+</body>
+</html>
