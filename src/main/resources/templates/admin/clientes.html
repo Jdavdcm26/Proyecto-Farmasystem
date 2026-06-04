@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Clientes')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('clientes')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Clientes</h1>
+        <p class="page-sub">Listado de clientes registrados en la farmacia.</p>
+      </div>
+      <div class="user-chip" id="userChip"></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search"><i data-lucide="search"></i>
+        <input id="q" placeholder="Buscar por nombre, cédula o email…" aria-label="Buscar cliente" /></div>
+      <select id="fEstado">
+        <option value="">Todos</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Cédula</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Dirección</th><th>Estado</th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="6"><div class="skel" style="height:50px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let all = [];
+  (async () => {
+    const s = await requireSession('ADMIN'); paintUserChip(s);
+    all = await api('/api/admin/clientes');
+    render();
+    ['#q','#fEstado'].forEach(sel => $(sel).addEventListener('input', render));
+  })().catch(e => toast(e.message, 'error'));
+
+  function render() {
+    const q = $('#q').value.toLowerCase();
+    const est = $('#fEstado').value;
+    const list = all.filter(c =>
+      (!q || c.cedula.toLowerCase().includes(q) ||
+             (c.nombre+' '+c.apellido).toLowerCase().includes(q) ||
+             (c.email||'').toLowerCase().includes(q)) &&
+      (est === '' || String(c.estado) === est)
+    );
+    const tb = $('#rows');
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="6" class="empty"><i data-lucide="users"></i><div>Sin clientes para mostrar.</div></td></tr>`;
+      lucide.createIcons(); return;
+    }
+    tb.innerHTML = list.map(c => `<tr>
+      <td><b>${c.cedula}</b></td>
+      <td>${c.nombre} ${c.apellido}</td>
+      <td class="muted">${c.email||'—'}</td>
+      <td class="muted">${c.telefono||'—'}</td>
+      <td class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.direccion||'—'}</td>
+      <td>${c.estado ? `<span class="pill green">Activo</span>` : `<span class="pill gray">Inactivo</span>`}</td>
+    </tr>`).join('');
+  }
+</script>
+</body>
+</html>
