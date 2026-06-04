@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Lotes')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('lotes')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Lotes</h1>
+        <p class="page-sub">Vista global de todos los lotes registrados. Selecciona un producto para crear o editar lotes.</p>
+      </div>
+      <a class="btn btn-primary" th:href="@{/admin/productos}"><i data-lucide="package"></i> Ir a Productos</a>
+    </div>
+
+    <div class="toolbar">
+      <div class="search"><i data-lucide="search"></i><input id="q" placeholder="Buscar por N° de lote o producto…" /></div>
+      <select id="fProducto"><option value="">Todos los productos</option></select>
+      <select id="fEstado">
+        <option value="">Todos los estados</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+      <select id="fVenc">
+        <option value="">Todos los vencimientos</option>
+        <option value="vencidos">Vencidos</option>
+        <option value="proximos">Próximos a vencer (30 días)</option>
+        <option value="vigentes">Vigentes</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>N° Lote</th><th>Producto</th><th>Ingreso</th><th>Vence</th>
+          <th class="num">Costo</th><th class="num">Utilidad</th><th class="num">P. Venta</th>
+          <th class="num">Stock</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="10"><div class="skel" style="height:50px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let all = [];
+
+  (async () => {
+    await requireSession('ADMIN');
+    all = await api('/api/admin/lotes');
+    const sel = $('#fProducto');
+    const productos = [...new Map(all.map(l => [l.productoId, l.productoNombre])).entries()];
+    productos.sort((a, b) => a[1].localeCompare(b[1]));
+    productos.forEach(([id, nombre]) => {
+      sel.insertAdjacentHTML('beforeend', `<option value="${id}">${nombre}</option>`);
+    });
+    render();
+    ['#q', '#fProducto', '#fEstado', '#fVenc'].forEach(s => $(s).addEventListener('input', render));
+  })().catch(e => toast(e.message, 'error'));
+
+  function render() {
+    const q     = $('#q').value.toLowerCase();
+    const prod  = $('#fProducto').value;
+    const est   = $('#fEstado').value;
+    const venc  = $('#fVenc').value;
+    const hoy   = new Date();
+    const limit = new Date(); limit.setDate(limit.getDate() + 30);
+
+    const list = all.filter(l => {
+      if (q && !((l.numeroLote||'').toLowerCase().includes(q) || (l.productoNombre||'').toLowerCase().includes(q))) return false;
+      if (prod && String(l.productoId) !== prod) return false;
+      if (est !== '' && String(l.activo) !== est) return false;
+      if (venc) {
+        const v = new Date(l.fechaVencimiento);
+        if (venc === 'vencidos'  && v >= hoy) return false;
+        if (venc === 'proximos'  && (v < hoy || v > limit)) return false;
+        if (venc === 'vigentes'  && v < hoy) return false;
+      }
+      return true;
+    });
+
+    const tb = $('#rows');
+    if (!list.length) {
+      tb.innerHTML = `<tr><td colspan="10" class="empty"><i data-lucide="layers"></i><div>Sin lotes para mostrar.</div></td></tr>`;
+      lucide.createIcons(); return;
+    }
+    tb.innerHTML = list.map(l => {
+      const v = new Date(l.fechaVencimiento);
+      const dias = Math.floor((v - hoy) / 86400000);
+      let vencCell;
+      if (dias < 0)       vencCell = `<span class="pill red">${fmtDate(l.fechaVencimiento)}</span>`;
+      else if (dias <= 30) vencCell = `<span class="pill amber">${fmtDate(l.fechaVencimiento)}</span>`;
+      else                vencCell = `<span class="muted">${fmtDate(l.fechaVencimiento)}</span>`;
+      return `<tr>
+        <td><b>${l.numeroLote}</b></td>
+        <td>${l.productoNombre || '—'}</td>
+        <td class="muted">${fmtDate(l.fechaIngreso)}</td>
+        <td>${vencCell}</td>
+        <td class="num">${fmtMoney(l.precioCosto)}</td>
+        <td class="num">${l.porcentajeUtilidad}%</td>
+        <td class="num"><b>${fmtMoney(l.precioVenta)}</b></td>
+        <td class="num">${l.stock}</td>
+        <td>${l.activo ? `<span class="pill green">Activo</span>` : `<span class="pill gray">Inactivo</span>`}</td>
+        <td class="row-actions">
+          <a class="btn btn-sm btn-ghost btn-icon" title="Gestionar lotes del producto" href="/admin/productos/${l.productoId}/lotes"><i data-lucide="pencil"></i></a>
+        </td>
+      </tr>`;
+    }).join('');
+    lucide.createIcons();
+  }
+</script>
+</body>
+</html>
