@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/client-shell :: head('Tienda')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div th:replace="~{fragments/client-shell :: navbar('tienda')}"></div>
+
+<main id="main" class="client-main">
+  <!-- Hero -->
+  <div class="hero">
+    <span class="pill"><i data-lucide="sparkles" style="width:14px;height:14px"></i> Catálogo en línea</span>
+    <h1>Encuentra lo que necesitas</h1>
+    <p>Medicamentos y productos de salud disponibles para tu bienestar. Agrega al carrito y confirma tu pedido.</p>
+  </div>
+
+  <!-- Filtros -->
+  <div class="cat-toolbar" id="cats">
+    <div class="search" style="max-width:320px">
+      <i data-lucide="search"></i>
+      <input id="q" placeholder="Buscar producto…" aria-label="Buscar producto" />
+    </div>
+    <button class="chip active" data-cat="">Todos</button>
+  </div>
+
+  <!-- Grilla -->
+  <div class="product-grid" id="grid">
+    <div class="skel" style="height:280px;border-radius:16px"></div>
+    <div class="skel" style="height:280px;border-radius:16px"></div>
+    <div class="skel" style="height:280px;border-radius:16px"></div>
+  </div>
+</main>
+
+<!-- Botón carrito flotante -->
+<button class="cart-btn" onclick="toggleCart()" aria-label="Ver carrito" title="Carrito">
+  <i data-lucide="shopping-cart" style="width:26px;height:26px"></i>
+  <span class="count" id="cart-count">0</span>
+</button>
+
+<!-- Drawer carrito -->
+<div class="drawer" id="cart-drawer" aria-label="Carrito de compras">
+  <div class="drawer-head">
+    <h3><i data-lucide="shopping-cart" style="width:20px;height:20px;margin-right:8px;vertical-align:middle"></i>Carrito</h3>
+    <button class="btn btn-icon btn-ghost" onclick="toggleCart()" aria-label="Cerrar carrito"><i data-lucide="x"></i></button>
+  </div>
+  <div class="drawer-body" id="cart-items">
+    <p style="color:var(--color-text-muted);text-align:center;margin-top:40px">Tu carrito está vacío.</p>
+  </div>
+  <div class="drawer-foot">
+    <div class="total-row"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn btn-primary btn-block" onclick="confirmarCompra()" id="btn-comprar" disabled>
+      <i data-lucide="credit-card"></i> Confirmar pedido
+    </button>
+  </div>
+</div>
+<div id="overlay" onclick="toggleCart()" style="position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:79;display:none"></div>
+
+<div th:replace="~{fragments/client-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  let products = [], cart = {}, catSel = '';
+
+  (async () => {
+    await requireSession('CLIENT');
+    const [prods, cats] = await Promise.all([
+      api('/api/catalogo'),
+      api('/api/categorias/publicas')
+    ]);
+    products = prods;
+    const catBar = $('#cats');
+    cats.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'chip'; btn.dataset.cat = c.id;
+      btn.textContent = c.nombre;
+      btn.onclick = () => selectCat(c.id, btn);
+      catBar.appendChild(btn);
+    });
+    render();
+    $('#q').addEventListener('input', render);
+  })().catch(e => toast(e.message, 'error'));
+
+  function selectCat(id, btn) {
+    catSel = id === catSel ? '' : String(id);
+    $$('.chip').forEach(b => b.classList.toggle('active', b.dataset.cat === catSel));
+    render();
+  }
+
+  function render() {
+    const q = $('#q').value.toLowerCase();
+    const list = products.filter(p =>
+      (!q || p.nombre.toLowerCase().includes(q) || (p.descripcion||'').toLowerCase().includes(q)) &&
+      (!catSel || String(p.categoriaId) === catSel)
+    );
+    const g = $('#grid');
+    if (!list.length) {
+      g.innerHTML = `<div class="empty" style="grid-column:1/-1">
+        <i data-lucide="package-open"></i>
+        <p>Sin productos para mostrar.</p></div>`;
+      lucide.createIcons(); return;
+    }
+    g.innerHTML = list.map((p, idx) => {
+      const sinStock = p.stock === 0;
+      const stockBajo = !sinStock && p.stockMinimo != null && p.stock <= p.stockMinimo;
+      const icons = ['pill','flask-conical','tablets','heart-pulse','leaf','thermometer'];
+      const icon = icons[idx % icons.length] || 'pill';
+      return `<div class="product">
+        <div class="img">
+          ${sinStock   ? `<span class="pill red">Sin stock</span>` : ''}
+          ${stockBajo  ? `<span class="pill amber">Stock bajo</span>` : ''}
+          <i data-lucide="${icon}"></i>
+        </div>
+        <div class="body">
+          <p class="cat">${p.categoriaNombre || 'General'}</p>
+          <h3 class="name">${p.nombre}</h3>
+          ${p.descripcion ? `<p class="desc">${p.descripcion}</p>` : ''}
+          <p class="price">${fmtMoney(p.precio)}</p>
+          <p class="stock">${sinStock ? 'Sin unidades' : `${p.stock} unid. disponibles`}</p>
+          <div class="add">
+            ${sinStock
+              ? `<button class="btn btn-ghost btn-block" disabled>No disponible</button>`
+              : `<button class="btn btn-primary btn-block" onclick='addCart(${JSON.stringify(p)})'>
+                  <i data-lucide="shopping-cart"></i> Agregar
+                </button>`
+            }
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }
+
+  function addCart(p) {
+    if (!cart[p.id]) cart[p.id] = { ...p, qty: 0 };
+    cart[p.id].qty++;
+    updateCartUI();
+    toast(`${p.nombre} agregado al carrito`);
+  }
+
+  function updateCartUI() {
+    const items = Object.values(cart);
+    const total = items.reduce((s, i) => s + i.precio * i.qty, 0);
+    const count = items.reduce((s, i) => s + i.qty, 0);
+
+    $('#cart-count').textContent = count;
+    $('#cart-total').textContent = fmtMoney(total);
+    $('#btn-comprar').disabled = count === 0;
+
+    const body = $('#cart-items');
+    if (!items.length) { body.innerHTML = `<p class="muted" style="text-align:center;margin-top:40px;font-size:14px">Tu carrito está vacío.</p>`; return; }
+    body.innerHTML = items.map(i => `
+      <div class="cart-item">
+        <div class="ci-img"><i data-lucide="pill" style="width:22px;height:22px"></i></div>
+        <div class="ci-body">
+          <p class="ci-name">${i.nombre}</p>
+          <div class="ci-row">
+            <div class="qty">
+              <button onclick="changeQty(${i.id},-1)">−</button>
+              <span>${i.qty}</span>
+              <button onclick="changeQty(${i.id},1)">+</button>
+            </div>
+            <span class="ci-price">${fmtMoney(i.precio * i.qty)}</span>
+          </div>
+        </div>
+      </div>`).join('');
+    lucide.createIcons();
+  }
+
+  function changeQty(id, delta) {
+    cart[id].qty += delta;
+    if (cart[id].qty <= 0) delete cart[id];
+    updateCartUI();
+  }
+
+  function toggleCart() {
+    const d = $('#cart-drawer'), o = $('#overlay');
+    const open = d.classList.toggle('open');
+    o.style.display = open ? 'block' : 'none';
+  }
+
+  async function confirmarCompra() {
+    const items = Object.values(cart);
+    if (!items.length) return;
+    const body = {
+      detalleVentas: items.map(i => ({
+        productoId: i.id,
+        cantidad: i.qty
+      }))
+    };
+    $('#btn-comprar').disabled = true;
+    try {
+      await api('/api/compras', { method: 'POST', body: JSON.stringify(body) });
+      cart = {}; updateCartUI(); toggleCart();
+      toast('Pedido confirmado correctamente.');
+      // Recargar productos para actualizar stock
+      products = await api('/api/catalogo'); render();
+    } catch(e) {
+      toast(e.message, 'error');
+      $('#btn-comprar').disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
