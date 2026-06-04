@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/admin-shell :: head('Inicio')}"></head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<div class="app">
+  <div th:replace="~{fragments/admin-shell :: sidebar('inicio')}"></div>
+
+  <main id="main" class="main">
+    <div class="topbar">
+      <div>
+        <h1 class="page-title">Panel general</h1>
+        <p class="page-sub">Resumen del estado de la farmacia.</p>
+      </div>
+      <div class="user-chip" id="userChip"></div>
+    </div>
+
+    <section class="kpi-grid" aria-label="Indicadores clave">
+      <div class="kpi green">
+        <div class="kpi-head">
+          <p class="kpi-label">Ingresos del mes</p>
+          <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+        </div>
+        <p class="kpi-value" id="k-ingresosMes">$0</p>
+        <p class="kpi-foot"><i data-lucide="calendar"></i><span id="k-ventasMes">0</span> ventas este mes</p>
+      </div>
+      <div class="kpi blue">
+        <div class="kpi-head">
+          <p class="kpi-label">Ingresos totales</p>
+          <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+        </div>
+        <p class="kpi-value" id="k-ingresos">$0</p>
+        <p class="kpi-foot"><i data-lucide="receipt"></i><span id="k-ventas">0</span> ventas registradas</p>
+      </div>
+      <div class="kpi amber">
+        <div class="kpi-head">
+          <p class="kpi-label">Alertas de inventario</p>
+          <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
+        </div>
+        <p class="kpi-value" id="k-stockBajo">0</p>
+        <p class="kpi-foot">
+          <i data-lucide="package-x"></i><span id="k-sinStock">0</span> sin stock &nbsp;·&nbsp;
+          <i data-lucide="calendar-x"></i><span id="k-vencidos">0</span> vencidos
+        </p>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-head">
+          <p class="kpi-label">Clientes registrados</p>
+          <div class="kpi-icon"><i data-lucide="users"></i></div>
+        </div>
+        <p class="kpi-value" id="k-clientes">0</p>
+        <p class="kpi-foot"><i data-lucide="tag"></i><span id="k-categorias">0</span> categorías activas</p>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <div class="card">
+        <h2 class="section-title"><i data-lucide="receipt-text"></i> Últimas ventas</h2>
+        <div class="table-wrap" style="border:none">
+          <table>
+            <thead><tr><th>N°</th><th>Cliente</th><th>Fecha</th><th class="num">Total</th><th>Estado</th></tr></thead>
+            <tbody id="t-ventas"><tr><td colspan="5" class="empty"><div class="skel" style="height:60px"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="section-title"><i data-lucide="alert-circle"></i> Alertas de inventario</h2>
+        <div id="alerts-list"><div class="skel" style="height:60px"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<style>
+  .alert-product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .alert-product-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12.5px;
+  }
+  .alert-product-name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--ink-200);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .alert-product-name i { width: 12px; height: 12px; flex-shrink: 0; }
+  .pill.amber { background: oklch(0.35 0.08 70 / 0.4); color: oklch(0.80 0.13 70); border: 1px solid oklch(0.50 0.10 70 / 0.3); }
+</style>
+<div th:replace="~{fragments/admin-shell :: toasts}"></div>
+<script th:src="@{/js/common.js}"></script>
+<script>
+  lucide.createIcons();
+  (async () => {
+    const s = await requireSession('ADMIN'); paintUserChip(s);
+    try {
+      const d = await api('/api/admin/dashboard');
+      $('#k-ingresos').textContent = fmtMoney(d.ingresosTotal);
+      $('#k-ingresosMes').textContent = fmtMoney(d.ingresosMesActual);
+      $('#k-ventasMes').textContent = d.ventasMesActual;
+      $('#k-ventas').textContent = d.totalVentas;
+      $('#k-stockBajo').textContent = d.productosStockBajo;
+      $('#k-sinStock').textContent  = d.productosSinStock;
+      $('#k-vencidos').textContent  = d.productosVencidos;
+      $('#k-clientes').textContent  = d.totalClientes;
+      $('#k-categorias').textContent = d.totalCategorias;
+
+      const ventas = await api('/api/admin/ventas');
+      const tb = $('#t-ventas');
+      if (!ventas.length) {
+        tb.innerHTML = `<tr><td colspan="5" class="empty"><i data-lucide="inbox"></i><div>Aún no hay ventas registradas.</div></td></tr>`;
+      } else {
+        tb.innerHTML = ventas.slice(0, 6).map(v => `
+          <tr>
+            <td><b>${v.numeroVenta || '#'+v.id}</b></td>
+            <td>${v.clienteNombre || '—'}</td>
+            <td class="muted">${fmtDateTime(v.fechaVenta)}</td>
+            <td class="num"><b>${fmtMoney(v.total)}</b></td>
+            <td><span class="pill ${v.estado==='ANULADA'?'red':'green'}">${v.estado}</span></td>
+          </tr>`).join('');
+      }
+
+      const [stockBajo, sinStock, proxVencer, vencidos] = await Promise.all([
+        api('/api/admin/productos/stock-bajo').catch(() => []),
+        api('/api/admin/productos/sin-stock').catch(() => []),
+        api('/api/admin/productos/proximos-vencer').catch(() => []),
+        api('/api/admin/productos/vencidos').catch(() => [])
+      ]);
+
+      const al = $('#alerts-list');
+      const blocks = [];
+
+      if (vencidos.length) {
+        const items = vencidos.map(p =>
+          `<div class="alert-product-row">
+            <span class="alert-product-name"><i data-lucide="pill"></i> ${p.nombre}</span>
+            <span class="pill red">Venció ${fmtDate(p.fechaVencimiento)}</span>
+          </div>`
+        ).join('');
+        blocks.push(`
+          <div class="alert error">
+            <i data-lucide="calendar-x"></i>
+            <div style="flex:1">
+              <b>${vencidos.length} producto${vencidos.length>1?'s':''} vencido${vencidos.length>1?'s':''}</b>
+              <div class="alert-product-list">${items}</div>
+            </div>
+          </div>`);
+      }
+
+      if (proxVencer.length) {
+        const items = proxVencer.map(p =>
+          `<div class="alert-product-row">
+            <span class="alert-product-name"><i data-lucide="pill"></i> ${p.nombre}</span>
+            <span class="pill amber">Vence ${fmtDate(p.fechaVencimiento)}</span>
+          </div>`
+        ).join('');
+        blocks.push(`
+          <div class="alert warn">
+            <i data-lucide="calendar-clock"></i>
+            <div style="flex:1">
+              <b>${proxVencer.length} próximo${proxVencer.length>1?'s':''} a vencer (30 días)</b>
+              <div class="alert-product-list">${items}</div>
+            </div>
+          </div>`);
+      }
+
+      if (sinStock.length) {
+        const items = sinStock.map(p =>
+          `<div class="alert-product-row">
+            <span class="alert-product-name"><i data-lucide="pill"></i> ${p.nombre}</span>
+            <span class="pill red">Sin stock</span>
+          </div>`
+        ).join('');
+        blocks.push(`
+          <div class="alert error">
+            <i data-lucide="package-x"></i>
+            <div style="flex:1">
+              <b>${sinStock.length} sin stock</b>
+              <div class="alert-product-list">${items}</div>
+            </div>
+          </div>`);
+      }
+
+      if (stockBajo.length) {
+        const items = stockBajo.map(p =>
+          `<div class="alert-product-row">
+            <span class="alert-product-name"><i data-lucide="pill"></i> ${p.nombre}</span>
+            <span class="pill amber">${p.stock} uds</span>
+          </div>`
+        ).join('');
+        blocks.push(`
+          <div class="alert warn">
+            <i data-lucide="alert-triangle"></i>
+            <div style="flex:1">
+              <b>${stockBajo.length} con stock bajo</b>
+              <div class="alert-product-list">${items}</div>
+            </div>
+          </div>`);
+      }
+
+      if (!blocks.length) blocks.push(`<div class="alert success"><i data-lucide="circle-check"></i><div>Inventario sin alertas. Todo bajo control.</div></div>`);
+      al.innerHTML = blocks.join('');
+      lucide.createIcons();
+    } catch (e) { toast(e.message, 'error'); }
+  })();
+</script>
+</body>
+</html>
